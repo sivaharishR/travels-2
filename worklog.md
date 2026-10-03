@@ -31,3 +31,20 @@ Work Log:
 
 Stage Summary:
 - Hydration mismatch eliminated; all booking functionality re-verified intact.
+---
+Task ID: 3
+Agent: Z.ai Code (main)
+Task: Add admin login and an admin dashboard to view all activities.
+
+Work Log:
+- Added ActivityLog model (type, message, bookingRef, createdAt) to Prisma schema and pushed DB.
+- Created src/lib/admin-auth.ts (server-only credential check with env overrides, in-memory token sessions with 8h TTL, 1s throttle on failed attempts) and src/lib/admin-session.ts (SSR-safe client session via useSyncExternalStore + sessionStorage).
+- New APIs: POST /api/admin/login (logs success + failed attempts), POST /api/admin/logout, GET /api/admin/dashboard (Bearer-protected; returns stats + all bookings + last 150 activities). Dashboard/booking routes now write BOOKING_CREATED / BOOKING_CANCELLED / BOOKING_UPDATED / ADMIN_LOGIN / ADMIN_LOGIN_FAILED / ADMIN_LOGOUT events.
+- Built AdminLoginDialog (username/password, inline errors, demo credentials hint) and AdminDashboard (stat cards: total/active/cancelled/revenue; tabs: full bookings table with sticky header + scrollable activity feed with per-event icons).
+- Integrated into page.tsx: header Admin button → dialog; admin mode swaps customer view for dashboard; "Exit admin" restores it. Refactored shared formatINR + StatusBadge helpers used by both views.
+- Fixed stale-Prisma-client 500 on login by restarting dev server after db push. Replaced setState-in-effect with useSyncExternalStore to satisfy react-hooks lint.
+- Verified in browser: wrong password → 401 error shown; valid login → dashboard with live data; new booking (QC-DYNH6Z ₹120.80) appeared in stats/table/activity; unauthorized API calls → 401; session survives reload; logout restores customer view. Lint clean.
+
+Stage Summary:
+- Admin can sign in (demo creds: admin / quickcab123, overridable via ADMIN_USERNAME/ADMIN_PASSWORD) and see ALL bookings + full activity audit trail.
+- APIs protected by Bearer tokens; failures logged. Customer experience unchanged.

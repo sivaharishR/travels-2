@@ -36,3 +36,26 @@ export interface FareEstimate {
   waitingCharge: number;
   totalFare: number;
 }
+
+export interface ActivityEntry {
+  id: string;
+  type: string;
+  message: string;
+  bookingRef: string | null;
+  createdAt: string;
+}
+
+export interface AdminStats {
+  total: number;
+  confirmed: number;
+  cancelled: number;
+  completed: number;
+  revenue: number;
+  totalWaitingMinutes: number;
+}
+
+export interface AdminDashboardData {
+  stats: AdminStats;
+  bookings: Booking[];
+  activities: ActivityEntry[];
+}

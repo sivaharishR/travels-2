@@ -103,6 +103,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await db.activityLog.create({
+      data: {
+        type: "BOOKING_CREATED",
+        message: `Booking ${booking.bookingRef} created — ${passengerName}, ${pickupLocation} → ${dropLocation} (${cabType}, ₹${fare.totalFare})`,
+        bookingRef: booking.bookingRef,
+      },
+    });
+
     return NextResponse.json({ booking }, { status: 201 });
   } catch (err) {
     console.error("Create booking error:", err);

@@ -25,6 +25,16 @@ export async function PATCH(
       data: { status },
     });
 
+    if (existing.status !== status) {
+      await db.activityLog.create({
+        data: {
+          type: status === "CANCELLED" ? "BOOKING_CANCELLED" : "BOOKING_UPDATED",
+          message: `Booking ${booking.bookingRef} status changed: ${existing.status} → ${status}`,
+          bookingRef: booking.bookingRef,
+        },
+      });
+    }
+
     return NextResponse.json({ booking });
   } catch (err) {
     console.error("Update booking error:", err);

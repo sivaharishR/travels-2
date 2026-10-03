@@ -14,44 +14,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { CAB_TYPES } from "@/lib/fare";
+import { formatINR } from "@/lib/format";
+import { StatusBadge } from "@/components/booking/status-badge";
 import type { Booking } from "@/types/booking";
-
-function formatINR(n: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(n);
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === "CONFIRMED") {
-    return (
-      <Badge className="border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-        Confirmed
-      </Badge>
-    );
-  }
-  if (status === "CANCELLED") {
-    return (
-      <Badge variant="secondary" className="text-muted-foreground">
-        Cancelled
-      </Badge>
-    );
-  }
-  if (status === "COMPLETED") {
-    return (
-      <Badge className="border-transparent bg-amber-100 text-amber-800 hover:bg-amber-100">
-        Completed
-      </Badge>
-    );
-  }
-  return <Badge variant="outline">{status}</Badge>;
-}
 
 export function RecentBookings({ version }: { version: number }) {
   const { toast } = useToast();

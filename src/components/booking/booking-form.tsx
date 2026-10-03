@@ -44,6 +44,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { CAB_TYPES, calculateFare, FREE_WAITING_MINUTES, WAITING_CHARGE_PER_MIN } from "@/lib/fare";
+import { formatINR } from "@/lib/format";
 import type { Booking, FareEstimate } from "@/types/booking";
 
 const WAITING_OPTIONS = [0, 5, 10, 15, 20, 30, 45, 60];
@@ -62,14 +63,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-function formatINR(n: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(n);
-}
 
 function toDatetimeLocal(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
