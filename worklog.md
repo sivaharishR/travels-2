@@ -18,3 +18,16 @@ Stage Summary:
 - Booking persisted in SQLite via Prisma; fares computed server-side (lib/fare.ts shared client preview + API).
 - APIs: POST /api/estimate, GET/POST /api/bookings, PATCH /api/bookings/[id] — all verified 200/201.
 - Lint clean; no runtime errors in dev.log.
+---
+Task ID: 2
+Agent: Z.ai Code (main)
+Task: Fix hydration mismatch error on pickup-time input (reported by user).
+
+Work Log:
+- Root cause: `pickupTimeMin` was computed with `new Date()` in a render-time useMemo, so SSR HTML embedded the server clock (17:05) while the client hydrated with the visitor's clock (22:35) — React flagged the differing `min` attribute.
+- Fix (booking-form.tsx): replaced the useMemo with `useState("")` + `useEffect` so the `min` attribute is only set after hydration; removed now-unused `useMemo` import.
+- Hardening (page.tsx): added `suppressHydrationWarning` to the footer copyright year (same `new Date()`-in-render class of risk).
+- Verified with Agent Browser: no console/page errors after reload, `min` now applies client-side (2026-10-03T17:19), default pickup time (now + 30 min) still fills correctly, form validation still works, footer renders fine.
+
+Stage Summary:
+- Hydration mismatch eliminated; all booking functionality re-verified intact.

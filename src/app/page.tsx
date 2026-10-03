@@ -164,7 +164,10 @@ export default function Home() {
       {/* ---------- Footer (sticks to bottom) ---------- */}
       <footer className="mt-auto border-t bg-white">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-2 px-4 py-5 text-sm text-muted-foreground sm:flex-row sm:px-6">
-          <p className="flex items-center gap-1.5">
+          <p
+            className="flex items-center gap-1.5"
+            suppressHydrationWarning
+          >
             <CarTaxiFront className="size-4 text-amber-600" />
             © {new Date().getFullYear()} QuickCab — fast, fair city rides.
           </p>

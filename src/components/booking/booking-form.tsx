@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -143,10 +143,13 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
     }
   }, [getValues, setValue]);
 
-  const pickupTimeMin = useMemo(
-    () => toDatetimeLocal(new Date(Date.now())),
-    []
-  );
+  // `min` for the pickup time input. Computed AFTER hydration only — computing
+  // it during render embeds the server's clock into SSR HTML, causing a
+  // hydration mismatch (server time vs. visitor's local time).
+  const [pickupTimeMin, setPickupTimeMin] = useState<string>("");
+  useEffect(() => {
+    setPickupTimeMin(toDatetimeLocal(new Date()));
+  }, []);
 
   // Live fare estimates via API (debounced), with client-side fallback
   useEffect(() => {
