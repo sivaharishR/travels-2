@@ -66,3 +66,21 @@ Work Log:
 Stage Summary:
 - Every new booking triggers an admin email notification pipeline with full audit trail.
 - Real delivery activates the moment SMTP_USER + SMTP_PASS (Gmail App Password) are set in .env; until then notifications are logged as SKIPPED with instructions, visible in admin Emails tab.
+---
+Task ID: 4-b
+Agent: Z.ai Code (main)
+Task: Activate Gmail email notifications with the owner's App Password (follow-up to Task 4).
+
+Work Log:
+- Received the Gmail App Password from the owner and set SMTP_USER=sivaharish2k1@gmail.com + SMTP_PASS=<app password> in .env (ADMIN_EMAIL / SMTP_HOST / SMTP_PORT were already preset for Gmail).
+- Wrote a temporary SMTP check script (verify() + branded test email), ran it: ✅ SMTP auth OK, test email accepted by Gmail (messageId ef89c893-...). Deleted the script afterwards so the password never lives in project files.
+- Restarted the dev server (double-fork `setsid` daemon pattern) so Next.js loaded the new .env; confirmed "Environments: .env" in the boot log.
+- Live pipeline test via API: booking QC-RCE2GQ ("SMTP Live Test", sedan, 8.5 km, 10 min wait, ₹212.50) → EmailLog row [SENT] → sivaharish2k1@gmail.com, no error.
+- UI golden-path test via Agent Browser: filled the form (Priya Sharma, Egmore → Phoenix MarketCity, 15 min wait, Sedan) → "Ride confirmed!" → booking QC-J4HDG3 (₹305) created.
+- Admin dashboard → Emails tab renders: QC-J4HDG3 [Sent], QC-RCE2GQ [Sent], old pre-credential QC-8CAX37 [Not sent — SMTP off]. Activity tab shows EMAIL_SENT events; mobile 390px layout stacks correctly.
+- Zero page errors / console errors; bun run lint clean; dev.log shows only normal Prisma query logging.
+
+Stage Summary:
+- Gmail notifications are LIVE: every new booking now emails the full details (ref, passenger, route, pickup time, cab, waiting time, fare breakdown) to sivaharish2k1@gmail.com from that same Gmail account.
+- Delivery attempts are auditable in the admin Emails tab (Sent / Not sent / Failed with error details) and Activity feed; email sending remains fire-and-forget and can never block or fail a booking.
+- Note: the App Password is stored only in .env (git-ignored). If Gmail later rejects it (revoked/expired), the Emails tab will show FAILED with the SMTP error and a new App Password can be pasted into .env, followed by a dev server restart.
