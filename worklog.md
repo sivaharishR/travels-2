@@ -48,3 +48,21 @@ Work Log:
 Stage Summary:
 - Admin can sign in (demo creds: admin / quickcab123, overridable via ADMIN_USERNAME/ADMIN_PASSWORD) and see ALL bookings + full activity audit trail.
 - APIs protected by Bearer tokens; failures logged. Customer experience unchanged.
+---
+Task ID: 4
+Agent: Z.ai Code (main)
+Task: Send admin an email notification (sivaharish2k1@gmail.com) whenever a user books a cab.
+
+Work Log:
+- Installed nodemailer + @types/nodemailer.
+- Added EmailLog model (toAddress, subject, status SENT/FAILED/SKIPPED, error, bookingRef) via db push.
+- Created src/lib/mailer.ts: Gmail SMTP transporter (env-configurable, 8s timeouts), branded HTML email template with full booking details, notifyAdminNewBooking() that never throws and always records outcome in EmailLog + ActivityLog (EMAIL_SENT / EMAIL_SKIPPED / EMAIL_FAILED).
+- Wired into POST /api/bookings as fire-and-forget (booking response never waits on email).
+- .env: ADMIN_EMAIL=sivaharish2k1@gmail.com, SMTP_HOST/PORT preset for Gmail, SMTP_USER/SMTP_PASS left blank for the owner to fill with a Gmail App Password.
+- Dashboard API now returns emailLogs; admin dashboard gained an "Emails" tab (status badges: Sent / Not sent — SMTP off / Failed, with error details) plus email events in the Activity feed.
+- Fixed flaky background dev server by launching with setsid.
+- Verified end-to-end: booking QC-8CAX37 (₹365 sedan) created → EmailLog entry to sivaharish2k1@gmail.com with SKIPPED status + reason → activity feed event → Emails tab renders correctly in admin UI. Lint clean.
+
+Stage Summary:
+- Every new booking triggers an admin email notification pipeline with full audit trail.
+- Real delivery activates the moment SMTP_USER + SMTP_PASS (Gmail App Password) are set in .env; until then notifications are logged as SKIPPED with instructions, visible in admin Emails tab.

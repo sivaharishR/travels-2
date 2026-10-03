@@ -45,6 +45,16 @@ export interface ActivityEntry {
   createdAt: string;
 }
 
+export interface EmailEntry {
+  id: string;
+  toAddress: string;
+  subject: string;
+  status: string;
+  error: string | null;
+  bookingRef: string | null;
+  createdAt: string;
+}
+
 export interface AdminStats {
   total: number;
   confirmed: number;
@@ -58,4 +68,5 @@ export interface AdminDashboardData {
   stats: AdminStats;
   bookings: Booking[];
   activities: ActivityEntry[];
+  emailLogs: EmailEntry[];
 }

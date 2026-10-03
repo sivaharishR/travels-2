@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calculateFare, generateBookingRef } from "@/lib/fare";
+import { notifyAdminNewBooking } from "@/lib/mailer";
 
 // GET /api/bookings - list the most recent bookings
 export async function GET() {
@@ -110,6 +111,12 @@ export async function POST(request: NextRequest) {
         bookingRef: booking.bookingRef,
       },
     });
+
+    // Notify the admin by email (Gmail SMTP). Fire-and-forget with full
+    // error handling inside — booking response never waits on email.
+    void notifyAdminNewBooking(booking).catch((err) =>
+      console.error("Admin email notification error:", err)
+    );
 
     return NextResponse.json({ booking }, { status: 201 });
   } catch (err) {

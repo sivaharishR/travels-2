@@ -14,9 +14,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const [bookings, activities] = await Promise.all([
+    const [bookings, activities, emailLogs] = await Promise.all([
       db.booking.findMany({ orderBy: { createdAt: "desc" } }),
       db.activityLog.findMany({ orderBy: { createdAt: "desc" }, take: 150 }),
+      db.emailLog.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
     ]);
 
     const confirmed = bookings.filter((b) => b.status === "CONFIRMED").length;
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
       },
       bookings,
       activities,
+      emailLogs,
     });
   } catch (err) {
     console.error("Admin dashboard error:", err);

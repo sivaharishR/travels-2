@@ -16,9 +16,13 @@ import {
   ShieldAlert,
   LogIn,
   Clock,
+  Mail,
+  MailX,
+  MailQuestion,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -67,6 +71,18 @@ const ACTIVITY_STYLES: Record<
   ADMIN_LOGOUT: {
     icon: LogOut,
     className: "bg-zinc-100 text-zinc-600",
+  },
+  EMAIL_SENT: {
+    icon: Mail,
+    className: "bg-teal-100 text-teal-700",
+  },
+  EMAIL_SKIPPED: {
+    icon: MailQuestion,
+    className: "bg-amber-100 text-amber-700",
+  },
+  EMAIL_FAILED: {
+    icon: MailX,
+    className: "bg-rose-100 text-rose-700",
   },
 };
 
@@ -211,7 +227,7 @@ export function AdminDashboard({ token, onLogout }: AdminDashboardProps) {
 
           {/* Tabs: bookings table + activity feed */}
           <Tabs defaultValue="bookings">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-lg grid-cols-3">
               <TabsTrigger value="bookings" className="gap-1.5 cursor-pointer">
                 <Table2 className="size-4" />
                 Bookings
@@ -219,6 +235,10 @@ export function AdminDashboard({ token, onLogout }: AdminDashboardProps) {
               <TabsTrigger value="activity" className="gap-1.5 cursor-pointer">
                 <Activity className="size-4" />
                 Activity
+              </TabsTrigger>
+              <TabsTrigger value="emails" className="gap-1.5 cursor-pointer">
+                <Mail className="size-4" />
+                Emails
               </TabsTrigger>
             </TabsList>
 
@@ -355,10 +375,96 @@ export function AdminDashboard({ token, onLogout }: AdminDashboardProps) {
                 </ul>
               )}
             </TabsContent>
+
+            {/* Email notifications log */}
+            <TabsContent value="emails" className="mt-4">
+              {loading && !data ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-14 w-full rounded-xl" />
+                  ))}
+                </div>
+              ) : !data || data.emailLogs.length === 0 ? (
+                <EmptyState text="No email notifications yet. Every new booking triggers one to the admin." />
+              ) : (
+                <ul className="custom-scrollbar max-h-[520px] space-y-2.5 overflow-y-auto pr-1">
+                  {data.emailLogs.map((e) => (
+                    <li
+                      key={e.id}
+                      className="flex flex-col gap-2 rounded-xl border p-4 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center"
+                    >
+                      <span
+                        className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${
+                          e.status === "SENT"
+                            ? "bg-teal-100 text-teal-700"
+                            : e.status === "SKIPPED"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-rose-100 text-rose-700"
+                        }`}
+                      >
+                        {e.status === "SENT" ? (
+                          <Mail className="size-4" />
+                        ) : e.status === "SKIPPED" ? (
+                          <MailQuestion className="size-4" />
+                        ) : (
+                          <MailX className="size-4" />
+                        )}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{e.subject}</p>
+                        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                          <span>To: {e.toAddress}</span>
+                          {e.bookingRef && (
+                            <span className="font-mono font-semibold text-amber-700">
+                              {e.bookingRef}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Clock className="size-3" />
+                            {format(new Date(e.createdAt), "EEE, d MMM · HH:mm:ss")}
+                          </span>
+                        </p>
+                        {e.error && (
+                          <p className="mt-1 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                            {e.error}
+                          </p>
+                        )}
+                      </div>
+                      <EmailStatusBadge status={e.status} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+function EmailStatusBadge({ status }: { status: string }) {
+  if (status === "SENT") {
+    return (
+      <Badge className="shrink-0 border-transparent bg-teal-100 text-teal-800 hover:bg-teal-100">
+        Sent
+      </Badge>
+    );
+  }
+  if (status === "SKIPPED") {
+    return (
+      <Badge
+        variant="outline"
+        className="shrink-0 border-amber-300 bg-amber-50 text-amber-800"
+      >
+        Not sent — SMTP off
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="shrink-0 border-transparent bg-rose-100 text-rose-800 hover:bg-rose-100">
+      Failed
+    </Badge>
   );
 }
 

@@ -40,3 +40,13 @@ model ActivityLog {
   bookingRef String?
   createdAt  DateTime @default(now())
 }
+
+model EmailLog {
+  id         String   @id @default(cuid())
+  toAddress  String
+  subject    String
+  status     String
+  error      String?
+  bookingRef String?
+  createdAt  DateTime @default(now())
+}
