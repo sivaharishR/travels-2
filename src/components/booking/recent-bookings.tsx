@@ -8,8 +8,6 @@ import {
   RefreshCw,
   XCircle,
   CarTaxiFront,
-  Clock,
-  CalendarClock,
   Inbox,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -150,20 +148,11 @@ export function RecentBookings({ version }: { version: number }) {
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <CalendarClock className="size-3.5" />
-                        {b.pickupTime
-                          ? format(new Date(b.pickupTime), "EEE, d MMM · h:mm a")
-                          : "Flexible pickup"}
-                      </span>
-                      {b.tripType !== "ROUND_TRIP" && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="size-3.5" />
-                          Wait: {b.waitingMinutes} min
-                        </span>
-                      )}
                       <span>
                         {b.distanceKm} km{b.tripType === "ROUND_TRIP" ? " total" : ""}
+                      </span>
+                      <span>
+                        Booked {format(new Date(b.createdAt), "d MMM · h:mm a")}
                       </span>
                     </div>
                   </div>

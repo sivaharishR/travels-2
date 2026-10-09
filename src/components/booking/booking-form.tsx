@@ -1,27 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { format } from "date-fns";
 import {
   User,
   Phone,
   Mail,
   MapPin,
   Navigation,
-  CalendarClock,
   Users,
-  Clock,
   Route,
   CheckCircle2,
   Loader2,
-  Info,
   ArrowRight,
   ArrowLeftRight,
   BadgeCheck,
+  PhoneCall,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,8 +43,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import {
   CAB_TYPES,
-  FREE_WAITING_MINUTES,
-  WAITING_CHARGE_PER_MIN,
   ROUND_TRIP_MIN_KM,
   ROUND_TRIP_MAX_KM,
   ONE_WAY_MAX_KM,
@@ -55,46 +50,23 @@ import {
 import { formatINR } from "@/lib/format";
 import type { Booking } from "@/types/booking";
 
-const WAITING_OPTIONS = [0, 5, 10, 15, 20, 30, 45, 60];
-
 type TripType = "ONE_WAY" | "ROUND_TRIP";
 
-const formSchema = z
-  .object({
-    passengerName: z.string().trim().min(2, "Name must be at least 2 characters"),
-    phone: z
-      .string()
-      .trim()
-      .regex(/^[+\d][\d\s-]{6,15}$/, "Enter a valid phone number"),
-    email: z.union([z.literal(""), z.email("Enter a valid email address")]),
-    pickupLocation: z.string().trim().min(3, "Enter a pickup location"),
-    dropLocation: z.string().trim().min(3, "Enter a drop location"),
-    // Pickup time is only required for one-way trips (round trips are
-    // scheduled flexibly with the customer over the phone).
-    pickupTime: z.string().optional(),
-    passengers: z.string().min(1, "Select passengers"),
-    tripType: z.enum(["ONE_WAY", "ROUND_TRIP"]),
-  })
-  .superRefine((vals, ctx) => {
-    if (vals.tripType === "ONE_WAY" && !vals.pickupTime) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["pickupTime"],
-        message: "Select a pickup date & time",
-      });
-    }
-  });
+const formSchema = z.object({
+  passengerName: z.string().trim().min(2, "Name must be at least 2 characters"),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[+\d][\d\s-]{6,15}$/, "Enter a valid phone number"),
+  email: z.union([z.literal(""), z.email("Enter a valid email address")]),
+  pickupLocation: z.string().trim().min(3, "Enter a pickup location"),
+  dropLocation: z.string().trim().min(3, "Enter a drop location"),
+  passengers: z.string().min(1, "Select passengers"),
+  tripType: z.enum(["ONE_WAY", "ROUND_TRIP"]),
+});
 
 type FormValues = z.infer<typeof formSchema>;
 
-function toDatetimeLocal(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
-}
-
-// Deterministic pseudo distance estimate derived from the two location names.
 function estimateDistanceKm(a: string, b: string): number {
   const s = `${a.trim().toLowerCase()}->${b.trim().toLowerCase()}`;
   let h = 0;
@@ -113,7 +85,6 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
   const { toast } = useToast();
   const [cabType, setCabType] = useState<string>("sedan");
   const [distanceKm, setDistanceKm] = useState<number>(8);
-  const [waitingMinutes, setWaitingMinutes] = useState<number>(0);
   const [distanceTouched, setDistanceTouched] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
@@ -135,7 +106,6 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
       email: "",
       pickupLocation: "",
       dropLocation: "",
-      pickupTime: "",
       passengers: "1",
       tripType: "ONE_WAY",
     },
@@ -150,34 +120,15 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
   const distanceMin = isRoundTrip ? ROUND_TRIP_MIN_KM : 1;
   const distanceMax = isRoundTrip ? ROUND_TRIP_MAX_KM : ONE_WAY_MAX_KM;
 
-  // Default pickup time: 30 minutes from now (client-only to avoid hydration mismatch)
-  useEffect(() => {
-    if (!getValues("pickupTime")) {
-      setValue("pickupTime", toDatetimeLocal(new Date(Date.now() + 30 * 60 * 1000)));
-    }
-  }, [getValues, setValue]);
-
-  // `min` for the pickup time input. Computed AFTER hydration only — computing
-  // it during render embeds the server's clock into SSR HTML, causing a
-  // hydration mismatch (server time vs. visitor's local time).
-  const [pickupTimeMin, setPickupTimeMin] = useState<string>("");
-  useEffect(() => {
-    setPickupTimeMin(toDatetimeLocal(new Date()));
-  }, []);
-
   const setTripType = (t: TripType) => {
     setValue("tripType", t, { shouldValidate: true });
     if (t === "ROUND_TRIP") {
-      // Round trips start at 350 km and don't collect waiting time
-      setWaitingMinutes(0);
+      // Round trips start at the 350 km minimum
       setDistanceKm((prev) => Math.max(ROUND_TRIP_MIN_KM, Math.min(ROUND_TRIP_MAX_KM, prev)));
     } else {
       setDistanceKm((prev) => Math.min(ONE_WAY_MAX_KM, prev));
     }
   };
-
-  const pickup = watch("pickupLocation");
-  const drop = watch("dropLocation");
 
   const handleLocationBlur = () => {
     if (distanceTouchedRef.current || isRoundTrip) return; // no auto-estimate for round trips
@@ -217,15 +168,9 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
           pickupLocation: values.pickupLocation,
           dropLocation: values.dropLocation,
           tripType,
-          // Pickup time only applies to one-way trips
-          pickupTime:
-            tripType === "ONE_WAY" && values.pickupTime
-              ? new Date(values.pickupTime).toISOString()
-              : null,
           cabType,
           passengers: Number(values.passengers),
           distanceKm,
-          waitingMinutes: tripType === "ROUND_TRIP" ? 0 : waitingMinutes,
         }),
       });
       const data = await res.json();
@@ -236,7 +181,7 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
       onBooked?.();
       toast({
         title: "Ride confirmed 🚕",
-        description: `Booking ${data.booking.bookingRef} is confirmed. Your cab is on its way!`,
+        description: `Booking ${data.booking.bookingRef} is confirmed. We'll call you to plan the departure!`,
       });
       reset({
         passengerName: "",
@@ -244,14 +189,12 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
         email: "",
         pickupLocation: "",
         dropLocation: "",
-        pickupTime: toDatetimeLocal(new Date(Date.now() + 30 * 60 * 1000)),
         passengers: "1",
         tripType,
       });
       distanceTouchedRef.current = false;
       setDistanceTouched(false);
       setDistanceKm(tripType === "ROUND_TRIP" ? ROUND_TRIP_MIN_KM : 8);
-      setWaitingMinutes(0);
     } catch (err) {
       toast({
         title: "Booking failed",
@@ -370,8 +313,8 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                 </div>
                 {isRoundTrip && (
                   <p className="text-xs text-amber-700">
-                    Round trips cover a minimum of {ROUND_TRIP_MIN_KM} km — pickup time is
-                    flexible and we&apos;ll call you to schedule the departure.
+                    Round trips cover a minimum of {ROUND_TRIP_MIN_KM} km — we&apos;ll plan both
+                    legs of the journey with you.
                   </p>
                 )}
               </div>
@@ -409,34 +352,13 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                     <p className="text-xs text-destructive">{errors.dropLocation.message}</p>
                   )}
                 </div>
-                {!isRoundTrip && (
-                  <div className="space-y-2">
-                    <Label htmlFor="pickupTime">Pickup date &amp; time *</Label>
-                    <div className="relative">
-                      <CalendarClock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="pickupTime"
-                        type="datetime-local"
-                        min={pickupTimeMin}
-                        className="pl-9"
-                        aria-invalid={!!errors.pickupTime}
-                        {...register("pickupTime")}
-                      />
-                    </div>
-                    {errors.pickupTime && (
-                      <p className="text-xs text-destructive">{errors.pickupTime.message}</p>
-                    )}
-                  </div>
-                )}
-                {isRoundTrip && (
-                  <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 sm:col-span-2">
-                    <Info className="mt-0.5 size-3.5 shrink-0" />
-                    <span>
-                      No fixed pickup time needed — after booking, our team will call you to
-                      arrange a convenient departure.
-                    </span>
-                  </div>
-                )}
+                <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 sm:col-span-2">
+                  <PhoneCall className="mt-0.5 size-3.5 shrink-0" />
+                  <span>
+                    No pickup time needed — after booking, our team will call you to arrange a
+                    convenient departure.
+                  </span>
+                </div>
                 <div className="space-y-2">
                   <Label>Passengers</Label>
                   <Select
@@ -461,75 +383,43 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
 
             <Separator />
 
-            {/* Distance (+ waiting time for one-way trips only) */}
-            <div className={isRoundTrip ? "space-y-3" : "grid gap-6 sm:grid-cols-2"}>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="distance" className="flex items-center gap-1.5">
-                    <Route className="size-4 text-muted-foreground" />
-                    {isRoundTrip ? "Total distance" : "Trip distance"}
-                  </Label>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      id="distance"
-                      type="number"
-                      min={distanceMin}
-                      max={distanceMax}
-                      step={isRoundTrip ? 1 : 0.5}
-                      value={Math.round(distanceKm * 1000) / 1000}
-                      onChange={(e) => onDistanceInput(e.target.value)}
-                      className="h-8 w-20 text-right"
-                      aria-label="Trip distance in kilometers"
-                    />
-                    <span className="text-sm text-muted-foreground">km</span>
-                  </div>
+            {/* Distance */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="distance" className="flex items-center gap-1.5">
+                  <Route className="size-4 text-muted-foreground" />
+                  {isRoundTrip ? "Total distance" : "Trip distance"}
+                </Label>
+                <div className="flex items-center gap-1">
+                  <Input
+                    id="distance"
+                    type="number"
+                    min={distanceMin}
+                    max={distanceMax}
+                    step={isRoundTrip ? 1 : 0.5}
+                    value={Math.round(distanceKm * 1000) / 1000}
+                    onChange={(e) => onDistanceInput(e.target.value)}
+                    className="h-8 w-20 text-right"
+                    aria-label="Trip distance in kilometers"
+                  />
+                  <span className="text-sm text-muted-foreground">km</span>
                 </div>
-                <Slider
-                  value={[Math.min(distanceMax, Math.max(distanceMin, distanceKm))]}
-                  onValueChange={onSliderChange}
-                  min={distanceMin}
-                  max={isRoundTrip ? 2000 : 100}
-                  step={isRoundTrip ? 5 : 1}
-                  aria-label="Trip distance slider"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {isRoundTrip
-                    ? `Round trip — minimum ${ROUND_TRIP_MIN_KM} km. Drag the slider or type the total distance.`
-                    : distanceTouched
-                      ? "Custom distance — drag the slider to adjust."
-                      : "Auto-estimated from your locations — adjust if needed."}
-                </p>
               </div>
-
-              {!isRoundTrip && (
-                <div className="space-y-3">
-                  <Label className="flex items-center gap-1.5">
-                    <Clock className="size-4 text-muted-foreground" />
-                    Waiting time at pickup
-                  </Label>
-                  <div className="flex flex-wrap gap-2" role="group" aria-label="Waiting time in minutes">
-                    {WAITING_OPTIONS.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setWaitingMinutes(m)}
-                        aria-pressed={waitingMinutes === m}
-                        className={`min-h-9 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                          waitingMinutes === m
-                            ? "border-amber-500 bg-amber-400 text-black shadow-sm"
-                            : "bg-background hover:bg-muted"
-                        }`}
-                      >
-                        {m === 0 ? "No wait" : `${m} min`}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    First {FREE_WAITING_MINUTES} minutes are free, then ₹
-                    {WAITING_CHARGE_PER_MIN}/min applies.
-                  </p>
-                </div>
-              )}
+              <Slider
+                value={[Math.min(distanceMax, Math.max(distanceMin, distanceKm))]}
+                onValueChange={onSliderChange}
+                min={distanceMin}
+                max={isRoundTrip ? 2000 : 100}
+                step={isRoundTrip ? 5 : 1}
+                aria-label="Trip distance slider"
+              />
+              <p className="text-xs text-muted-foreground">
+                {isRoundTrip
+                  ? `Round trip — minimum ${ROUND_TRIP_MIN_KM} km. Drag the slider or type the total distance.`
+                  : distanceTouched
+                    ? "Custom distance — drag the slider to adjust."
+                    : "Auto-estimated from your locations — adjust if needed."}
+              </p>
             </div>
 
             <Separator />
@@ -617,9 +507,8 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                   Ride confirmed!
                 </DialogTitle>
                 <DialogDescription className="text-center">
-                  {confirmedBooking.tripType === "ROUND_TRIP"
-                    ? "Your round trip is booked. We'll call you to schedule the departure."
-                    : "Your cab is booked. Show this reference to your driver."}
+                  Your {confirmedBooking.tripType === "ROUND_TRIP" ? "round trip" : "ride"} is
+                  booked. Our team will call you shortly to schedule the departure.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -656,25 +545,6 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                       {confirmedBooking.dropLocation}
                     </span>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">Pickup time</span>
-                    <span className="text-right font-medium">
-                      {confirmedBooking.pickupTime
-                        ? format(
-                            new Date(confirmedBooking.pickupTime),
-                            "EEE, d MMM · h:mm a"
-                          )
-                        : "Flexible — we'll call you"}
-                    </span>
-                  </div>
-                  {confirmedBooking.tripType !== "ROUND_TRIP" && (
-                    <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Waiting time</span>
-                      <span className="text-right font-medium">
-                        {confirmedBooking.waitingMinutes} min
-                      </span>
-                    </div>
-                  )}
                   <Separator />
                   <div className="flex justify-between gap-4 text-base">
                     <span className="font-semibold">Total fare</span>

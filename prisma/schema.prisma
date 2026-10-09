@@ -19,15 +19,12 @@ model Booking {
   pickupLocation String
   dropLocation   String
   tripType       String   @default("ONE_WAY")
-  pickupTime     DateTime?
   cabType        String
   passengers     Int      @default(1)
   distanceKm     Float
-  waitingMinutes Int      @default(0)
   baseFare       Float
   perKmRate      Float
   distanceFare   Float
-  waitingCharge  Float
   totalFare      Float
   status         String   @default("CONFIRMED")
   createdAt      DateTime @default(now())

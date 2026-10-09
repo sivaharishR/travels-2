@@ -9,15 +9,12 @@ export interface Booking {
   pickupLocation: string;
   dropLocation: string;
   tripType: string;
-  pickupTime: string | null;
   cabType: string;
   passengers: number;
   distanceKm: number;
-  waitingMinutes: number;
   baseFare: number;
   perKmRate: number;
   distanceFare: number;
-  waitingCharge: number;
   totalFare: number;
   status: string;
   createdAt: string;
@@ -32,9 +29,6 @@ export interface FareEstimate {
   baseFare: number;
   perKmRate: number;
   distanceFare: number;
-  waitingMinutes: number;
-  billableWaitingMinutes: number;
-  waitingCharge: number;
   totalFare: number;
 }
 
@@ -61,8 +55,8 @@ export interface AdminStats {
   confirmed: number;
   cancelled: number;
   completed: number;
+  roundTrips: number;
   revenue: number;
-  totalWaitingMinutes: number;
 }
 
 export interface AdminDashboardData {

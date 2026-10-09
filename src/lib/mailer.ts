@@ -15,15 +15,12 @@ export interface BookingLike {
   pickupLocation: string;
   dropLocation: string;
   tripType?: string | null;
-  pickupTime: string | Date | null;
   cabType: string;
   passengers: number;
   distanceKm: number;
-  waitingMinutes: number;
   baseFare: number;
   perKmRate: number;
   distanceFare: number;
-  waitingCharge: number;
   totalFare: number;
 }
 
@@ -140,11 +137,9 @@ function buildEmailHtml(b: BookingLike): string {
         ${row("Trip type", isRoundTrip ? "Round trip ↔" : "One way")}
         ${row("Pickup", b.pickupLocation)}
         ${row("Drop", b.dropLocation)}
-        ${row("Pickup time", formatDateTime(b.pickupTime))}
         ${row("Cab", `${cab?.name ?? b.cabType} (${b.passengers} pax)`)}
         ${row("Distance", `${b.distanceKm} km${isRoundTrip ? " (total)" : ""}`)}
-        ${b.waitingMinutes > 0 ? row("Waiting time", `${b.waitingMinutes} min`) : ""}
-        ${row("Fare breakdown", `Base ${formatINR(b.baseFare)} + Distance ${formatINR(b.distanceFare)}${b.waitingCharge > 0 ? ` + Waiting ${formatINR(b.waitingCharge)}` : ""}`)}
+        ${row("Fare breakdown", `Base ${formatINR(b.baseFare)} + Distance ${formatINR(b.distanceFare)}`)}
         ${row("Total fare", formatINR(b.totalFare))}
       </table>
 
@@ -164,9 +159,8 @@ function buildEmailText(b: BookingLike): string {
     `Passenger: ${b.passengerName} (${b.phone})`,
     `Trip type: ${b.tripType === "ROUND_TRIP" ? "Round trip" : "One way"}`,
     `Route: ${b.pickupLocation} → ${b.dropLocation}`,
-    `Pickup time: ${formatDateTime(b.pickupTime)}`,
     `Cab: ${cab?.name ?? b.cabType}, ${b.passengers} passenger(s)`,
-    `Distance: ${b.distanceKm} km${b.waitingMinutes > 0 ? `, Waiting: ${b.waitingMinutes} min` : ""}`,
+    `Distance: ${b.distanceKm} km`,
     `Total fare: ${formatINR(b.totalFare)}`,
   ].join("\n");
 }

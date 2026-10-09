@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "QuickCab — Book Your City Ride Instantly",
   description:
-    "Book a cab in seconds. Enter your details, pickup and drop location, choose a waiting time and get an instant transparent fare.",
+    "Book a cab in seconds. Enter your details, pickup and drop location, pick one way or round trip and get an instant transparent fare.",
   keywords: ["cab booking", "taxi", "ride booking", "QuickCab", "city rides", "airport transfer"],
   authors: [{ name: "QuickCab" }],
   icons: {
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "QuickCab — Book Your City Ride Instantly",
-    description: "Enter pickup & drop, choose waiting time, get an instant fare.",
+    description: "Enter pickup & drop, choose one way or round trip, get an instant fare.",
     siteName: "QuickCab",
     type: "website",
   },

@@ -29,9 +29,10 @@ export async function GET() {
 // POST /api/bookings - create a new booking
 // Body: {
 //   passengerName, phone, email?, pickupLocation, dropLocation,
-//   tripType ("ONE_WAY" | "ROUND_TRIP"), pickupTime (ISO, one-way only),
-//   cabType, passengers?, distanceKm, waitingMinutes (one-way only)
+//   tripType ("ONE_WAY" | "ROUND_TRIP"), cabType, passengers?, distanceKm
 // }
+// Note: no pickup time or waiting time — the team schedules the departure
+// with the customer by phone after booking.
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -48,8 +49,6 @@ export async function POST(request: NextRequest) {
         : "ONE_WAY";
     const passengers = Math.max(1, Math.min(6, Number(body.passengers) || 1));
     const distanceKm = Number(body.distanceKm) || 0;
-    // Round trips don't collect waiting time — force 0 server-side
-    const waitingMinutes = tripType === "ROUND_TRIP" ? 0 : Number(body.waitingMinutes) || 0;
 
     // --- Validation ---
     const errors: string[] = [];
@@ -79,27 +78,11 @@ export async function POST(request: NextRequest) {
         errors.push(`Trip distance cannot exceed ${ONE_WAY_MAX_KM} km`);
     }
 
-    // Pickup time is only collected for one-way trips; round trips are
-    // scheduled flexibly with the customer.
-    let pickupTime: Date | null = null;
-    if (tripType === "ONE_WAY") {
-      if (body.pickupTime) {
-        const d = new Date(body.pickupTime);
-        if (isNaN(d.getTime())) {
-          errors.push("Invalid pickup date/time");
-        } else {
-          pickupTime = d;
-        }
-      } else {
-        errors.push("Pickup date/time is required");
-      }
-    }
-
     if (errors.length > 0) {
       return NextResponse.json({ error: errors.join(", ") }, { status: 400 });
     }
 
-    const fare = calculateFare(cabType, distanceKm, waitingMinutes);
+    const fare = calculateFare(cabType, distanceKm);
 
     const booking = await db.booking.create({
       data: {
@@ -110,15 +93,12 @@ export async function POST(request: NextRequest) {
         pickupLocation,
         dropLocation,
         tripType,
-        pickupTime,
         cabType,
         passengers,
         distanceKm,
-        waitingMinutes,
         baseFare: fare.baseFare,
         perKmRate: fare.perKmRate,
         distanceFare: fare.distanceFare,
-        waitingCharge: fare.waitingCharge,
         totalFare: fare.totalFare,
         status: "CONFIRMED",
       },

@@ -42,7 +42,7 @@ const FEATURES = [
     icon: Clock3,
     title: "Flexible scheduling",
     description:
-      "Fix a pickup time for one-way rides, or let us call you to plan the departure.",
+      "No time slots to fill — book now and we'll call you to plan the departure.",
   },
   {
     icon: ShieldCheck,

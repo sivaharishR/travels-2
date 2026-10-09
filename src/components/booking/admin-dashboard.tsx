@@ -197,7 +197,7 @@ export function AdminDashboard({ token, onLogout }: AdminDashboardProps) {
                 icon={CarTaxiFront}
                 label="Total bookings"
                 value={String(stats.total)}
-                sub={`${stats.totalWaitingMinutes} min total wait requested`}
+                sub={`${stats.roundTrips} round trip${stats.roundTrips === 1 ? "" : "s"}`}
               />
               <StatCard
                 icon={BadgeCheck}
@@ -261,8 +261,6 @@ export function AdminDashboard({ token, onLogout }: AdminDashboardProps) {
                         <TableHead>Passenger</TableHead>
                         <TableHead>Route</TableHead>
                         <TableHead>Cab</TableHead>
-                        <TableHead>Pickup time</TableHead>
-                        <TableHead className="text-right">Wait</TableHead>
                         <TableHead className="text-right">Distance</TableHead>
                         <TableHead className="text-right">Fare</TableHead>
                         <TableHead>Status</TableHead>
@@ -306,16 +304,6 @@ export function AdminDashboard({ token, onLogout }: AdminDashboardProps) {
                                   <span className="font-medium text-amber-700"> · ↔ Round trip</span>
                                 )}
                               </span>
-                            </TableCell>
-                            <TableCell className="whitespace-nowrap">
-                              {b.pickupTime ? (
-                                format(new Date(b.pickupTime), "d MMM, h:mm a")
-                              ) : (
-                                <span className="text-muted-foreground">Flexible</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right whitespace-nowrap">
-                              {b.waitingMinutes} min
                             </TableCell>
                             <TableCell className="text-right whitespace-nowrap">
                               {b.distanceKm} km

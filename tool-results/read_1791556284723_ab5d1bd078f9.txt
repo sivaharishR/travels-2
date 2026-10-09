@@ -1,0 +1,700 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useEffect, useRef, useState } from "react";
+     4→     4→import { useForm } from "react-hook-form";
+     5→     5→import { zodResolver } from "@hookform/resolvers/zod";
+     6→     6→import { z } from "zod";
+     7→     7→import { motion } from "framer-motion";
+     8→     8→import { format } from "date-fns";
+     9→     9→import {
+    10→    10→  User,
+    11→    11→  Phone,
+    12→    12→  Mail,
+    13→    13→  MapPin,
+    14→    14→  Navigation,
+    15→    15→  CalendarClock,
+    16→    16→  Users,
+    17→    17→  Clock,
+    18→    18→  Route,
+    19→    19→  CheckCircle2,
+    20→    20→  Loader2,
+    21→    21→  Info,
+    22→    22→  ArrowRight,
+    23→    23→  ArrowLeftRight,
+    24→    24→  BadgeCheck,
+    25→    25→} from "lucide-react";
+    26→    26→import { Button } from "@/components/ui/button";
+    27→    27→import { Input } from "@/components/ui/input";
+    28→    28→import { Label } from "@/components/ui/label";
+    29→    29→import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+    30→    30→import { Slider } from "@/components/ui/slider";
+    31→    31→import {
+    32→    32→  Select,
+    33→    33→  SelectContent,
+    34→    34→  SelectItem,
+    35→    35→  SelectTrigger,
+    36→    36→  SelectValue,
+    37→    37→} from "@/components/ui/select";
+    38→    38→import {
+    39→    39→  Dialog,
+    40→    40→  DialogContent,
+    41→    41→  DialogDescription,
+    42→    42→  DialogHeader,
+    43→    43→  DialogTitle,
+    44→    44→} from "@/components/ui/dialog";
+    45→    45→import { Separator } from "@/components/ui/separator";
+    46→    46→import { useToast } from "@/hooks/use-toast";
+    47→    47→import {
+    48→    48→  CAB_TYPES,
+    49→    49→  FREE_WAITING_MINUTES,
+    50→    50→  WAITING_CHARGE_PER_MIN,
+    51→    51→  ROUND_TRIP_MIN_KM,
+    52→    52→  ROUND_TRIP_MAX_KM,
+    53→    53→  ONE_WAY_MAX_KM,
+    54→    54→} from "@/lib/fare";
+    55→    55→import { formatINR } from "@/lib/format";
+    56→    56→import type { Booking } from "@/types/booking";
+    57→    57→
+    58→    58→const WAITING_OPTIONS = [0, 5, 10, 15, 20, 30, 45, 60];
+    59→    59→
+    60→    60→type TripType = "ONE_WAY" | "ROUND_TRIP";
+    61→    61→
+    62→    62→const formSchema = z
+    63→    63→  .object({
+    64→    64→    passengerName: z.string().trim().min(2, "Name must be at least 2 characters"),
+    65→    65→    phone: z
+    66→    66→      .string()
+    67→    67→      .trim()
+    68→    68→      .regex(/^[+\d][\d\s-]{6,15}$/, "Enter a valid phone number"),
+    69→    69→    email: z.union([z.literal(""), z.email("Enter a valid email address")]),
+    70→    70→    pickupLocation: z.string().trim().min(3, "Enter a pickup location"),
+    71→    71→    dropLocation: z.string().trim().min(3, "Enter a drop location"),
+    72→    72→    // Pickup time is only required for one-way trips (round trips are
+    73→    73→    // scheduled flexibly with the customer over the phone).
+    74→    74→    pickupTime: z.string().optional(),
+    75→    75→    passengers: z.string().min(1, "Select passengers"),
+    76→    76→    tripType: z.enum(["ONE_WAY", "ROUND_TRIP"]),
+    77→    77→  })
+    78→    78→  .superRefine((vals, ctx) => {
+    79→    79→    if (vals.tripType === "ONE_WAY" && !vals.pickupTime) {
+    80→    80→      ctx.addIssue({
+    81→    81→        code: "custom",
+    82→    82→        path: ["pickupTime"],
+    83→    83→        message: "Select a pickup date & time",
+    84→    84→      });
+    85→    85→    }
+    86→    86→  });
+    87→    87→
+    88→    88→type FormValues = z.infer<typeof formSchema>;
+    89→    89→
+    90→    90→function toDatetimeLocal(d: Date): string {
+    91→    91→  const pad = (n: number) => String(n).padStart(2, "0");
+    92→    92→  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    93→    93→    d.getHours()
+    94→    94→  )}:${pad(d.getMinutes())}`;
+    95→    95→}
+    96→    96→
+    97→    97→// Deterministic pseudo distance estimate derived from the two location names.
+    98→    98→function estimateDistanceKm(a: string, b: string): number {
+    99→    99→  const s = `${a.trim().toLowerCase()}->${b.trim().toLowerCase()}`;
+   100→   100→  let h = 0;
+   101→   101→  for (let i = 0; i < s.length; i++) {
+   102→   102→    h = (h * 31 + s.charCodeAt(i)) >>> 0;
+   103→   103→  }
+   104→   104→  return Math.round((2 + (h % 4300) / 100) * 10) / 10; // 2.0 - 44.9 km
+   105→   105→}
+   106→   106→
+   107→   107→const TRIP_TYPE_CHIPS: { value: TripType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+   108→   108→  { value: "ONE_WAY", label: "One way", icon: ArrowRight },
+   109→   109→  { value: "ROUND_TRIP", label: "Round trip", icon: ArrowLeftRight },
+   110→   110→];
+   111→   111→
+   112→   112→export function BookingSection({ onBooked }: { onBooked?: () => void }) {
+   113→   113→  const { toast } = useToast();
+   114→   114→  const [cabType, setCabType] = useState<string>("sedan");
+   115→   115→  const [distanceKm, setDistanceKm] = useState<number>(8);
+   116→   116→  const [waitingMinutes, setWaitingMinutes] = useState<number>(0);
+   117→   117→  const [distanceTouched, setDistanceTouched] = useState<boolean>(false);
+   118→   118→  const [submitting, setSubmitting] = useState<boolean>(false);
+   119→   119→  const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
+   120→   120→  const distanceTouchedRef = useRef<boolean>(false);
+   121→   121→
+   122→   122→  const {
+   123→   123→    register,
+   124→   124→    handleSubmit,
+   125→   125→    getValues,
+   126→   126→    setValue,
+   127→   127→    watch,
+   128→   128→    reset,
+   129→   129→    formState: { errors },
+   130→   130→  } = useForm<FormValues>({
+   131→   131→    resolver: zodResolver(formSchema),
+   132→   132→    defaultValues: {
+   133→   133→      passengerName: "",
+   134→   134→      phone: "",
+   135→   135→      email: "",
+   136→   136→      pickupLocation: "",
+   137→   137→      dropLocation: "",
+   138→   138→      pickupTime: "",
+   139→   139→      passengers: "1",
+   140→   140→      tripType: "ONE_WAY",
+   141→   141→    },
+   142→   142→  });
+   143→   143→
+   144→   144→  const tripType = watch("tripType") as TripType;
+   145→   145→  const isRoundTrip = tripType === "ROUND_TRIP";
+   146→   146→
+   147→   147→  // Distance bounds depend on the trip type:
+   148→   148→  // one-way  → 1–500 km (existing behaviour)
+   149→   149→  // round trip → minimum 350 km, effectively no maximum
+   150→   150→  const distanceMin = isRoundTrip ? ROUND_TRIP_MIN_KM : 1;
+   151→   151→  const distanceMax = isRoundTrip ? ROUND_TRIP_MAX_KM : ONE_WAY_MAX_KM;
+   152→   152→
+   153→   153→  // Default pickup time: 30 minutes from now (client-only to avoid hydration mismatch)
+   154→   154→  useEffect(() => {
+   155→   155→    if (!getValues("pickupTime")) {
+   156→   156→      setValue("pickupTime", toDatetimeLocal(new Date(Date.now() + 30 * 60 * 1000)));
+   157→   157→    }
+   158→   158→  }, [getValues, setValue]);
+   159→   159→
+   160→   160→  // `min` for the pickup time input. Computed AFTER hydration only — computing
+   161→   161→  // it during render embeds the server's clock into SSR HTML, causing a
+   162→   162→  // hydration mismatch (server time vs. visitor's local time).
+   163→   163→  const [pickupTimeMin, setPickupTimeMin] = useState<string>("");
+   164→   164→  useEffect(() => {
+   165→   165→    setPickupTimeMin(toDatetimeLocal(new Date()));
+   166→   166→  }, []);
+   167→   167→
+   168→   168→  const setTripType = (t: TripType) => {
+   169→   169→    setValue("tripType", t, { shouldValidate: true });
+   170→   170→    if (t === "ROUND_TRIP") {
+   171→   171→      // Round trips start at 350 km and don't collect waiting time
+   172→   172→      setWaitingMinutes(0);
+   173→   173→      setDistanceKm((prev) => Math.max(ROUND_TRIP_MIN_KM, Math.min(ROUND_TRIP_MAX_KM, prev)));
+   174→   174→    } else {
+   175→   175→      setDistanceKm((prev) => Math.min(ONE_WAY_MAX_KM, prev));
+   176→   176→    }
+   177→   177→  };
+   178→   178→
+   179→   179→  const pickup = watch("pickupLocation");
+   180→   180→  const drop = watch("dropLocation");
+   181→   181→
+   182→   182→  const handleLocationBlur = () => {
+   183→   183→    if (distanceTouchedRef.current || isRoundTrip) return; // no auto-estimate for round trips
+   184→   184→    const p = getValues("pickupLocation");
+   185→   185→    const d = getValues("dropLocation");
+   186→   186→    if (p.trim().length >= 3 && d.trim().length >= 3) {
+   187→   187→      setDistanceKm(estimateDistanceKm(p, d));
+   188→   188→    }
+   189→   189→  };
+   190→   190→
+   191→   191→  const onSliderChange = (vals: number[]) => {
+   192→   192→    distanceTouchedRef.current = true;
+   193→   193→    setDistanceTouched(true);
+   194→   194→    // Round to kill Radix slider float-normalization noise (e.g. 40.29999923706055)
+   195→   195→    setDistanceKm(Math.round(vals[0] * 1000) / 1000);
+   196→   196→  };
+   197→   197→
+   198→   198→  const onDistanceInput = (raw: string) => {
+   199→   199→    const n = Number(raw);
+   200→   200→    if (isNaN(n)) return;
+   201→   201→    distanceTouchedRef.current = true;
+   202→   202→    setDistanceTouched(true);
+   203→   203→    const clamped = Math.round(Math.max(distanceMin, Math.min(distanceMax, n)) * 1000) / 1000;
+   204→   204→    setDistanceKm(clamped);
+   205→   205→  };
+   206→   206→
+   207→   207→  const onSubmit = async (values: FormValues) => {
+   208→   208→    setSubmitting(true);
+   209→   209→    try {
+   210→   210→      const res = await fetch("/api/bookings", {
+   211→   211→        method: "POST",
+   212→   212→        headers: { "Content-Type": "application/json" },
+   213→   213→        body: JSON.stringify({
+   214→   214→          passengerName: values.passengerName,
+   215→   215→          phone: values.phone,
+   216→   216→          email: values.email || null,
+   217→   217→          pickupLocation: values.pickupLocation,
+   218→   218→          dropLocation: values.dropLocation,
+   219→   219→          tripType,
+   220→   220→          // Pickup time only applies to one-way trips
+   221→   221→          pickupTime:
+   222→   222→            tripType === "ONE_WAY" && values.pickupTime
+   223→   223→              ? new Date(values.pickupTime).toISOString()
+   224→   224→              : null,
+   225→   225→          cabType,
+   226→   226→          passengers: Number(values.passengers),
+   227→   227→          distanceKm,
+   228→   228→          waitingMinutes: tripType === "ROUND_TRIP" ? 0 : waitingMinutes,
+   229→   229→        }),
+   230→   230→      });
+   231→   231→      const data = await res.json();
+   232→   232→      if (!res.ok) {
+   233→   233→        throw new Error(data.error || "Could not confirm your booking");
+   234→   234→      }
+   235→   235→      setConfirmedBooking(data.booking as Booking);
+   236→   236→      onBooked?.();
+   237→   237→      toast({
+   238→   238→        title: "Ride confirmed 🚕",
+   239→   239→        description: `Booking ${data.booking.bookingRef} is confirmed. Your cab is on its way!`,
+   240→   240→      });
+   241→   241→      reset({
+   242→   242→        passengerName: "",
+   243→   243→        phone: "",
+   244→   244→        email: "",
+   245→   245→        pickupLocation: "",
+   246→   246→        dropLocation: "",
+   247→   247→        pickupTime: toDatetimeLocal(new Date(Date.now() + 30 * 60 * 1000)),
+   248→   248→        passengers: "1",
+   249→   249→        tripType,
+   250→   250→      });
+   251→   251→      distanceTouchedRef.current = false;
+   252→   252→      setDistanceTouched(false);
+   253→   253→      setDistanceKm(tripType === "ROUND_TRIP" ? ROUND_TRIP_MIN_KM : 8);
+   254→   254→      setWaitingMinutes(0);
+   255→   255→    } catch (err) {
+   256→   256→      toast({
+   257→   257→        title: "Booking failed",
+   258→   258→        description:
+   259→   259→          err instanceof Error ? err.message : "Something went wrong. Please try again.",
+   260→   260→        variant: "destructive",
+   261→   261→      });
+   262→   262→    } finally {
+   263→   263→      setSubmitting(false);
+   264→   264→    }
+   265→   265→  };
+   266→   266→
+   267→   267→  return (
+   268→   268→    <section id="book" className="mx-auto w-full max-w-3xl">
+   269→   269→      <Card className="gap-6 py-6">
+   270→   270→        <CardHeader>
+   271→   271→          <CardTitle className="text-xl">Book your ride</CardTitle>
+   272→   272→          <CardDescription>
+   273→   273→            Fill in your details and trip information — takes less than a minute.
+   274→   274→          </CardDescription>
+   275→   275→        </CardHeader>
+   276→   276→        <CardContent>
+   277→   277→          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+   278→   278→            {/* Passenger details */}
+   279→   279→            <div>
+   280→   280→              <h3 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+   281→   281→                Passenger details
+   282→   282→              </h3>
+   283→   283→              <div className="grid gap-4 sm:grid-cols-2">
+   284→   284→                <div className="space-y-2">
+   285→   285→                  <Label htmlFor="passengerName">Full name *</Label>
+   286→   286→                  <div className="relative">
+   287→   287→                    <User className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+   288→   288→                    <Input
+   289→   289→                      id="passengerName"
+   290→   290→                      placeholder="e.g. Priya Sharma"
+   291→   291→                      className="pl-9"
+   292→   292→                      aria-invalid={!!errors.passengerName}
+   293→   293→                      {...register("passengerName")}
+   294→   294→                    />
+   295→   295→                  </div>
+   296→   296→                  {errors.passengerName && (
+   297→   297→                    <p className="text-xs text-destructive">{errors.passengerName.message}</p>
+   298→   298→                  )}
+   299→   299→                </div>
+   300→   300→                <div className="space-y-2">
+   301→   301→                  <Label htmlFor="phone">Phone number *</Label>
+   302→   302→                  <div className="relative">
+   303→   303→                    <Phone className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+   304→   304→                    <Input
+   305→   305→                      id="phone"
+   306→   306→                      type="tel"
+   307→   307→                      placeholder="+91 98765 43210"
+   308→   308→                      className="pl-9"
+   309→   309→                      aria-invalid={!!errors.phone}
+   310→   310→                      {...register("phone")}
+   311→   311→                    />
+   312→   312→                  </div>
+   313→   313→                  {errors.phone && (
+   314→   314→                    <p className="text-xs text-destructive">{errors.phone.message}</p>
+   315→   315→                  )}
+   316→   316→                </div>
+   317→   317→                <div className="space-y-2 sm:col-span-2">
+   318→   318→                  <Label htmlFor="email">
+   319→   319→                    Email <span className="text-muted-foreground">(optional)</span>
+   320→   320→                  </Label>
+   321→   321→                  <div className="relative">
+   322→   322→                    <Mail className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+   323→   323→                    <Input
+   324→   324→                      id="email"
+   325→   325→                      type="email"
+   326→   326→                      placeholder="you@example.com"
+   327→   327→                      className="pl-9"
+   328→   328→                      aria-invalid={!!errors.email}
+   329→   329→                      {...register("email")}
+   330→   330→                    />
+   331→   331→                  </div>
+   332→   332→                  {errors.email && (
+   333→   333→                    <p className="text-xs text-destructive">{errors.email.message}</p>
+   334→   334→                  )}
+   335→   335→                </div>
+   336→   336→              </div>
+   337→   337→            </div>
+   338→   338→
+   339→   339→            <Separator />
+   340→   340→
+   341→   341→            {/* Trip details */}
+   342→   342→            <div>
+   343→   343→              <h3 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+   344→   344→                Trip details
+   345→   345→              </h3>
+   346→   346→
+   347→   347→              {/* Trip type */}
+   348→   348→              <div className="mb-5 space-y-2">
+   349→   349→                <Label>Trip type</Label>
+   350→   350→                <div className="flex flex-wrap gap-2" role="group" aria-label="Trip type">
+   351→   351→                  {TRIP_TYPE_CHIPS.map(({ value, label, icon: Icon }) => {
+   352→   352→                    const active = tripType === value;
+   353→   353→                    return (
+   354→   354→                      <button
+   355→   355→                        key={value}
+   356→   356→                        type="button"
+   357→   357→                        onClick={() => setTripType(value)}
+   358→   358→                        aria-pressed={active}
+   359→   359→                        className={`flex min-h-9 items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+   360→   360→                          active
+   361→   361→                            ? "border-amber-500 bg-amber-400 text-black shadow-sm"
+   362→   362→                            : "bg-background hover:bg-muted"
+   363→   363→                        }`}
+   364→   364→                      >
+   365→   365→                        <Icon className="size-4" />
+   366→   366→                        {label}
+   367→   367→                      </button>
+   368→   368→                    );
+   369→   369→                  })}
+   370→   370→                </div>
+   371→   371→                {isRoundTrip && (
+   372→   372→                  <p className="text-xs text-amber-700">
+   373→   373→                    Round trips cover a minimum of {ROUND_TRIP_MIN_KM} km — pickup time is
+   374→   374→                    flexible and we&apos;ll call you to schedule the departure.
+   375→   375→                  </p>
+   376→   376→                )}
+   377→   377→              </div>
+   378→   378→
+   379→   379→              <div className="grid gap-4 sm:grid-cols-2">
+   380→   380→                <div className="space-y-2">
+   381→   381→                  <Label htmlFor="pickupLocation">Pickup location *</Label>
+   382→   382→                  <div className="relative">
+   383→   383→                    <MapPin className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-emerald-600" />
+   384→   384→                    <Input
+   385→   385→                      id="pickupLocation"
+   386→   386→                      placeholder="e.g. Indiranagar Metro Station"
+   387→   387→                      className="pl-9"
+   388→   388→                      aria-invalid={!!errors.pickupLocation}
+   389→   389→                      {...register("pickupLocation", { onBlur: handleLocationBlur })}
+   390→   390→                    />
+   391→   391→                  </div>
+   392→   392→                  {errors.pickupLocation && (
+   393→   393→                    <p className="text-xs text-destructive">{errors.pickupLocation.message}</p>
+   394→   394→                  )}
+   395→   395→                </div>
+   396→   396→                <div className="space-y-2">
+   397→   397→                  <Label htmlFor="dropLocation">Drop location *</Label>
+   398→   398→                  <div className="relative">
+   399→   399→                    <Navigation className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-rose-600" />
+   400→   400→                    <Input
+   401→   401→                      id="dropLocation"
+   402→   402→                      placeholder="e.g. Kempegowda Airport T2"
+   403→   403→                      className="pl-9"
+   404→   404→                      aria-invalid={!!errors.dropLocation}
+   405→   405→                      {...register("dropLocation", { onBlur: handleLocationBlur })}
+   406→   406→                    />
+   407→   407→                  </div>
+   408→   408→                  {errors.dropLocation && (
+   409→   409→                    <p className="text-xs text-destructive">{errors.dropLocation.message}</p>
+   410→   410→                  )}
+   411→   411→                </div>
+   412→   412→                {!isRoundTrip && (
+   413→   413→                  <div className="space-y-2">
+   414→   414→                    <Label htmlFor="pickupTime">Pickup date &amp; time *</Label>
+   415→   415→                    <div className="relative">
+   416→   416→                      <CalendarClock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+   417→   417→                      <Input
+   418→   418→                        id="pickupTime"
+   419→   419→                        type="datetime-local"
+   420→   420→                        min={pickupTimeMin}
+   421→   421→                        className="pl-9"
+   422→   422→                        aria-invalid={!!errors.pickupTime}
+   423→   423→                        {...register("pickupTime")}
+   424→   424→                      />
+   425→   425→                    </div>
+   426→   426→                    {errors.pickupTime && (
+   427→   427→                      <p className="text-xs text-destructive">{errors.pickupTime.message}</p>
+   428→   428→                    )}
+   429→   429→                  </div>
+   430→   430→                )}
+   431→   431→                {isRoundTrip && (
+   432→   432→                  <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 sm:col-span-2">
+   433→   433→                    <Info className="mt-0.5 size-3.5 shrink-0" />
+   434→   434→                    <span>
+   435→   435→                      No fixed pickup time needed — after booking, our team will call you to
+   436→   436→                      arrange a convenient departure.
+   437→   437→                    </span>
+   438→   438→                  </div>
+   439→   439→                )}
+   440→   440→                <div className="space-y-2">
+   441→   441→                  <Label>Passengers</Label>
+   442→   442→                  <Select
+   443→   443→                    value={watch("passengers")}
+   444→   444→                    onValueChange={(v) => setValue("passengers", v)}
+   445→   445→                  >
+   446→   446→                    <SelectTrigger className="w-full" aria-label="Number of passengers">
+   447→   447→                      <Users className="mr-2 size-4 text-muted-foreground" />
+   448→   448→                      <SelectValue placeholder="Select passengers" />
+   449→   449→                    </SelectTrigger>
+   450→   450→                    <SelectContent>
+   451→   451→                      {["1", "2", "3", "4", "5", "6"].map((n) => (
+   452→   452→                        <SelectItem key={n} value={n}>
+   453→   453→                          {n} passenger{n === "1" ? "" : "s"}
+   454→   454→                        </SelectItem>
+   455→   455→                      ))}
+   456→   456→                    </SelectContent>
+   457→   457→                  </Select>
+   458→   458→                </div>
+   459→   459→              </div>
+   460→   460→            </div>
+   461→   461→
+   462→   462→            <Separator />
+   463→   463→
+   464→   464→            {/* Distance (+ waiting time for one-way trips only) */}
+   465→   465→            <div className={isRoundTrip ? "space-y-3" : "grid gap-6 sm:grid-cols-2"}>
+   466→   466→              <div className="space-y-3">
+   467→   467→                <div className="flex items-center justify-between">
+   468→   468→                  <Label htmlFor="distance" className="flex items-center gap-1.5">
+   469→   469→                    <Route className="size-4 text-muted-foreground" />
+   470→   470→                    {isRoundTrip ? "Total distance" : "Trip distance"}
+   471→   471→                  </Label>
+   472→   472→                  <div className="flex items-center gap-1">
+   473→   473→                    <Input
+   474→   474→                      id="distance"
+   475→   475→                      type="number"
+   476→   476→                      min={distanceMin}
+   477→   477→                      max={distanceMax}
+   478→   478→                      step={isRoundTrip ? 1 : 0.5}
+   479→   479→                      value={Math.round(distanceKm * 1000) / 1000}
+   480→   480→                      onChange={(e) => onDistanceInput(e.target.value)}
+   481→   481→                      className="h-8 w-20 text-right"
+   482→   482→                      aria-label="Trip distance in kilometers"
+   483→   483→                    />
+   484→   484→                    <span className="text-sm text-muted-foreground">km</span>
+   485→   485→                  </div>
+   486→   486→                </div>
+   487→   487→                <Slider
+   488→   488→                  value={[Math.min(distanceMax, Math.max(distanceMin, distanceKm))]}
+   489→   489→                  onValueChange={onSliderChange}
+   490→   490→                  min={distanceMin}
+   491→   491→                  max={isRoundTrip ? 2000 : 100}
+   492→   492→                  step={isRoundTrip ? 5 : 1}
+   493→   493→                  aria-label="Trip distance slider"
+   494→   494→                />
+   495→   495→                <p className="text-xs text-muted-foreground">
+   496→   496→                  {isRoundTrip
+   497→   497→                    ? `Round trip — minimum ${ROUND_TRIP_MIN_KM} km. Drag the slider or type the total distance.`
+   498→   498→                    : distanceTouched
+   499→   499→                      ? "Custom distance — drag the slider to adjust."
+   500→   500→                      : "Auto-estimated from your locations — adjust if needed."}
+   501→   501→                </p>
+   502→   502→              </div>
+   503→   503→
+   504→   504→              {!isRoundTrip && (
+   505→   505→                <div className="space-y-3">
+   506→   506→                  <Label className="flex items-center gap-1.5">
+   507→   507→                    <Clock className="size-4 text-muted-foreground" />
+   508→   508→                    Waiting time at pickup
+   509→   509→                  </Label>
+   510→   510→                  <div className="flex flex-wrap gap-2" role="group" aria-label="Waiting time in minutes">
+   511→   511→                    {WAITING_OPTIONS.map((m) => (
+   512→   512→                      <button
+   513→   513→                        key={m}
+   514→   514→                        type="button"
+   515→   515→                        onClick={() => setWaitingMinutes(m)}
+   516→   516→                        aria-pressed={waitingMinutes === m}
+   517→   517→                        className={`min-h-9 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+   518→   518→                          waitingMinutes === m
+   519→   519→                            ? "border-amber-500 bg-amber-400 text-black shadow-sm"
+   520→   520→                            : "bg-background hover:bg-muted"
+   521→   521→                        }`}
+   522→   522→                      >
+   523→   523→                        {m === 0 ? "No wait" : `${m} min`}
+   524→   524→                      </button>
+   525→   525→                    ))}
+   526→   526→                  </div>
+   527→   527→                  <p className="text-xs text-muted-foreground">
+   528→   528→                    First {FREE_WAITING_MINUTES} minutes are free, then ₹
+   529→   529→                    {WAITING_CHARGE_PER_MIN}/min applies.
+   530→   530→                  </p>
+   531→   531→                </div>
+   532→   532→              )}
+   533→   533→            </div>
+   534→   534→
+   535→   535→            <Separator />
+   536→   536→
+   537→   537→            {/* Cab type selection (no rates shown) */}
+   538→   538→            <div>
+   539→   539→              <h3 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+   540→   540→                Choose your ride
+   541→   541→              </h3>
+   542→   542→              <div className="grid gap-3 sm:grid-cols-2">
+   543→   543→                {CAB_TYPES.map((cab) => {
+   544→   544→                  const active = cab.id === cabType;
+   545→   545→                  return (
+   546→   546→                    <button
+   547→   547→                      key={cab.id}
+   548→   548→                      type="button"
+   549→   549→                      onClick={() => setCabType(cab.id)}
+   550→   550→                      aria-pressed={active}
+   551→   551→                      className={`relative flex items-center gap-3 rounded-xl border p-4 text-left transition-all min-h-[76px] ${
+   552→   552→                        active
+   553→   553→                          ? "border-amber-500 bg-amber-50 ring-2 ring-amber-500/40 dark:bg-amber-950/30"
+   554→   554→                          : "hover:border-amber-300 hover:bg-muted/60"
+   555→   555→                      }`}
+   556→   556→                    >
+   557→   557→                      <span className="text-3xl" aria-hidden>
+   558→   558→                        {cab.icon}
+   559→   559→                      </span>
+   560→   560→                      <span className="min-w-0 flex-1">
+   561→   561→                        <span className="flex items-center gap-2 font-semibold">
+   562→   562→                          {cab.name}
+   563→   563→                          <span className="text-xs font-normal text-muted-foreground">
+   564→   564→                            · {cab.seats} seats
+   565→   565→                          </span>
+   566→   566→                        </span>
+   567→   567→                        <span className="block truncate text-xs text-muted-foreground">
+   568→   568→                          {cab.description}
+   569→   569→                        </span>
+   570→   570→                      </span>
+   571→   571→                      {active && (
+   572→   572→                        <CheckCircle2 className="absolute -top-2 -right-2 size-5 fill-amber-400 text-black" />
+   573→   573→                      )}
+   574→   574→                    </button>
+   575→   575→                  );
+   576→   576→                })}
+   577→   577→              </div>
+   578→   578→            </div>
+   579→   579→
+   580→   580→            {/* Submit */}
+   581→   581→            <Button
+   582→   582→              type="submit"
+   583→   583→              size="lg"
+   584→   584→              disabled={submitting}
+   585→   585→              className="h-12 w-full cursor-pointer bg-amber-400 text-base font-bold text-black hover:bg-amber-500"
+   586→   586→            >
+   587→   587→              {submitting ? (
+   588→   588→                <>
+   589→   589→                  <Loader2 className="animate-spin" /> Confirming…
+   590→   590→                </>
+   591→   591→              ) : (
+   592→   592→                <>Confirm booking</>
+   593→   593→              )}
+   594→   594→            </Button>
+   595→   595→          </form>
+   596→   596→        </CardContent>
+   597→   597→      </Card>
+   598→   598→
+   599→   599→      {/* ---------------- Confirmation dialog ---------------- */}
+   600→   600→      <Dialog
+   601→   601→        open={!!confirmedBooking}
+   602→   602→        onOpenChange={(open) => !open && setConfirmedBooking(null)}
+   603→   603→      >
+   604→   604→        <DialogContent className="sm:max-w-md">
+   605→   605→          {confirmedBooking && (
+   606→   606→            <>
+   607→   607→              <DialogHeader>
+   608→   608→                <motion.div
+   609→   609→                  initial={{ scale: 0.5, opacity: 0 }}
+   610→   610→                  animate={{ scale: 1, opacity: 1 }}
+   611→   611→                  transition={{ type: "spring", stiffness: 260, damping: 18 }}
+   612→   612→                  className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-100"
+   613→   613→                >
+   614→   614→                  <BadgeCheck className="size-9 text-emerald-600" />
+   615→   615→                </motion.div>
+   616→   616→                <DialogTitle className="text-center text-2xl">
+   617→   617→                  Ride confirmed!
+   618→   618→                </DialogTitle>
+   619→   619→                <DialogDescription className="text-center">
+   620→   620→                  {confirmedBooking.tripType === "ROUND_TRIP"
+   621→   621→                    ? "Your round trip is booked. We'll call you to schedule the departure."
+   622→   622→                    : "Your cab is booked. Show this reference to your driver."}
+   623→   623→                </DialogDescription>
+   624→   624→              </DialogHeader>
+   625→   625→              <div className="space-y-4">
+   626→   626→                <div className="rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 p-4 text-center">
+   627→   627→                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+   628→   628→                    Booking reference
+   629→   629→                  </p>
+   630→   630→                  <p className="font-mono text-2xl font-bold tracking-widest">
+   631→   631→                    {confirmedBooking.bookingRef}
+   632→   632→                  </p>
+   633→   633→                </div>
+   634→   634→                <div className="space-y-2 rounded-xl bg-muted p-4 text-sm">
+   635→   635→                  <div className="flex justify-between gap-4">
+   636→   636→                    <span className="text-muted-foreground">Passenger</span>
+   637→   637→                    <span className="text-right font-medium">
+   638→   638→                      {confirmedBooking.passengerName}
+   639→   639→                    </span>
+   640→   640→                  </div>
+   641→   641→                  <div className="flex justify-between gap-4">
+   642→   642→                    <span className="text-muted-foreground">Trip type</span>
+   643→   643→                    <span className="text-right font-medium">
+   644→   644→                      {confirmedBooking.tripType === "ROUND_TRIP" ? "Round trip" : "One way"}
+   645→   645→                    </span>
+   646→   646→                  </div>
+   647→   647→                  <div className="flex justify-between gap-4">
+   648→   648→                    <span className="text-muted-foreground">Pickup</span>
+   649→   649→                    <span className="max-w-[60%] truncate text-right font-medium">
+   650→   650→                      {confirmedBooking.pickupLocation}
+   651→   651→                    </span>
+   652→   652→                  </div>
+   653→   653→                  <div className="flex justify-between gap-4">
+   654→   654→                    <span className="text-muted-foreground">Drop</span>
+   655→   655→                    <span className="max-w-[60%] truncate text-right font-medium">
+   656→   656→                      {confirmedBooking.dropLocation}
+   657→   657→                    </span>
+   658→   658→                  </div>
+   659→   659→                  <div className="flex justify-between gap-4">
+   660→   660→                    <span className="text-muted-foreground">Pickup time</span>
+   661→   661→                    <span className="text-right font-medium">
+   662→   662→                      {confirmedBooking.pickupTime
+   663→   663→                        ? format(
+   664→   664→                            new Date(confirmedBooking.pickupTime),
+   665→   665→                            "EEE, d MMM · h:mm a"
+   666→   666→                          )
+   667→   667→                        : "Flexible — we'll call you"}
+   668→   668→                    </span>
+   669→   669→                  </div>
+   670→   670→                  {confirmedBooking.tripType !== "ROUND_TRIP" && (
+   671→   671→                    <div className="flex justify-between gap-4">
+   672→   672→                      <span className="text-muted-foreground">Waiting time</span>
+   673→   673→                      <span className="text-right font-medium">
+   674→   674→                        {confirmedBooking.waitingMinutes} min
+   675→   675→                      </span>
+   676→   676→                    </div>
+   677→   677→                  )}
+   678→   678→                  <Separator />
+   679→   679→                  <div className="flex justify-between gap-4 text-base">
+   680→   680→                    <span className="font-semibold">Total fare</span>
+   681→   681→                    <span className="font-bold">
+   682→   682→                      {formatINR(confirmedBooking.totalFare)}
+   683→   683→                    </span>
+   684→   684→                  </div>
+   685→   685→                </div>
+   686→   686→                <Button
+   687→   687→                  className="w-full cursor-pointer bg-amber-400 font-bold text-black hover:bg-amber-500"
+   688→   688→                  onClick={() => setConfirmedBooking(null)}
+   689→   689→                >
+   690→   690→                  Done
+   691→   691→                </Button>
+   692→   692→              </div>
+   693→   693→            </>
+   694→   694→          )}
+   695→   695→        </DialogContent>
+   696→   696→      </Dialog>
+   697→   697→    </section>
+   698→   698→  );
+   699→   699→}
+   700→   700→

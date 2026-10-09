@@ -104,3 +104,28 @@ Stage Summary:
 - Round trips are first-class: One way / Round trip chips; round trip = min 350 km (no practical max), no waiting time, no pickup time (flexible, scheduled by call); one-way behaves exactly as before.
 - Hatchback removed; cab cards and fare summary no longer show any prices (fare still computed server-side for admin + emails + confirmation dialog total).
 - Email notification pipeline hardened with a config-file fallback so .env wipes can't silently stop admin notifications.
+
+---
+Task ID: 5
+Agent: Z.ai Code (main)
+Task: Remove the waiting time from the booking flow entirely (and, per the earlier round-trip request, also drop pickup time everywhere) — completing the round-trip rework: round trip option (min 350 km, no max), no rates, no hatchback, no fare summary.
+
+Work Log:
+- src/lib/fare.ts: deleted FREE_WAITING_MINUTES / WAITING_CHARGE_PER_MIN and the whole waiting-charge calculation; calculateFare(cabTypeId, distanceKm) now returns base + perKm + distanceFare only. Round-trip policy constants kept (ROUND_TRIP_MIN_KM=350, ROUND_TRIP_MAX_KM=5000, ONE_WAY_MAX_KM=500).
+- prisma/schema.prisma: dropped pickupTime, waitingMinutes, waitingCharge columns from Booking; ran `bun run db:push` (data-loss accepted) + `bunx prisma generate`.
+- src/types/booking.ts: removed pickupTime/waitingMinutes/waitingCharge from Booking and FareEstimate; replaced AdminStats.totalWaitingMinutes with roundTrips.
+- src/app/api/bookings/route.ts: removed pickup-time requirement/validation and waitingMinutes parsing; fare = calculateFare(cabType, distanceKm); round-trip min-350 km validation retained, one-way max 500 km retained.
+- src/app/api/estimate/route.ts: removed waitingMinutes from body/call.
+- src/lib/mailer.ts: removed Pickup time / Waiting time rows and waiting charge from email HTML + text; BookingLike trimmed. formatDateTime kept for footer timestamp.
+- src/components/booking/booking-form.tsx: removed WAITING_OPTIONS, waitingMinutes + pickupTimeMin state, pickupTime zod field/superRefine, toDatetimeLocal helper, date-fns import, Clock/CalendarClock/Info icons; "we'll call you to arrange a convenient departure" note now shown for ALL trips (PhoneCall icon); distance block full-width; confirmation dialog shows Passenger/Trip type/Pickup/Drop/Total fare only; round-trip mode clamps distance to ≥350.
+- src/components/booking/recent-bookings.tsx: removed Wait + pickup time lines; metadata now shows distance + "Booked {date}".
+- src/app/api/admin/dashboard/route.ts + admin-dashboard.tsx: stats sub now "{n} round trips" instead of total wait minutes; bookings table dropped Pickup time and Wait columns.
+- src/app/page.tsx feature copy + layout.tsx metadata updated (no waiting/pickup-time wording).
+- Restarted dev server (setsid), `bun run lint` clean.
+- Verified via curl: round trip 700 km created (QC-KPB55S ₹10,575), sub-350 round trip rejected with "Round trips have a minimum distance of 350 km", one-way without pickupTime created (QC-JQJMUM ₹255), estimate API has no waiting fields.
+- Agent Browser E2E: desktop + 390px mobile — form has no waiting/pickup-time UI, round-trip switch clamps distance to 350, UI round-trip booking QC-NYWW97 confirmed (₹10,575, dialog shows no time rows), admin dashboard stats/table clean, Emails tab shows SENT for both trip types, zero console errors.
+
+Stage Summary:
+- Waiting time and pickup time are fully removed from UI, API, database, email templates and admin dashboard; booking flow is now: passenger details → trip type (one-way/round-trip) → locations → passengers → distance (round trip min 350 km, no practical max) → cab (Sedan/SUV/Luxury, no rates) → confirm.
+- Server-side total fare = base fare + distance × per-km rate; stored in DB for admin/receipt even though no rates are shown to customers.
+- Gmail notifications still fire for every booking (verified SENT for round trip and one-way).

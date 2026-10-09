@@ -23,13 +23,10 @@ export async function GET(request: NextRequest) {
     const confirmed = bookings.filter((b) => b.status === "CONFIRMED").length;
     const cancelled = bookings.filter((b) => b.status === "CANCELLED").length;
     const completed = bookings.filter((b) => b.status === "COMPLETED").length;
+    const roundTrips = bookings.filter((b) => b.tripType === "ROUND_TRIP").length;
     const revenue = bookings
       .filter((b) => b.status !== "CANCELLED")
       .reduce((sum, b) => sum + b.totalFare, 0);
-    const totalWaitingMinutes = bookings.reduce(
-      (sum, b) => sum + b.waitingMinutes,
-      0
-    );
 
     return NextResponse.json({
       stats: {
@@ -37,8 +34,8 @@ export async function GET(request: NextRequest) {
         confirmed,
         cancelled,
         completed,
+        roundTrips,
         revenue: Math.round(revenue * 100) / 100,
-        totalWaitingMinutes,
       },
       bookings,
       activities,

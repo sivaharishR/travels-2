@@ -44,10 +44,6 @@ export const CAB_TYPES: CabType[] = [
   },
 ];
 
-// Waiting time policy
-export const FREE_WAITING_MINUTES = 5;
-export const WAITING_CHARGE_PER_MIN = 2;
-
 // Round trip policy: minimum total distance, and a generous sanity cap
 // ("no maximum" for customers — the cap only guards against data errors)
 export const ROUND_TRIP_MIN_KM = 350;
@@ -62,37 +58,23 @@ export interface FareBreakdown {
   baseFare: number;
   perKmRate: number;
   distanceFare: number;
-  waitingMinutes: number;
-  billableWaitingMinutes: number;
-  waitingCharge: number;
   totalFare: number;
 }
 
 export function calculateFare(
   cabTypeId: string,
-  distanceKm: number,
-  waitingMinutes: number
+  distanceKm: number
 ): FareBreakdown {
   const cab = getCabType(cabTypeId) ?? CAB_TYPES[0];
   const safeDistance = Math.max(1, Math.min(ROUND_TRIP_MAX_KM, distanceKm || 0));
-  const safeWaiting = Math.max(0, Math.min(240, waitingMinutes || 0));
 
   const distanceFare = round2(safeDistance * cab.perKm);
-  const billableWaitingMinutes = Math.max(
-    0,
-    safeWaiting - FREE_WAITING_MINUTES
-  );
-  const waitingCharge = round2(billableWaitingMinutes * WAITING_CHARGE_PER_MIN);
-
-  const totalFare = round2(cab.baseFare + distanceFare + waitingCharge);
+  const totalFare = round2(cab.baseFare + distanceFare);
 
   return {
     baseFare: cab.baseFare,
     perKmRate: cab.perKm,
     distanceFare,
-    waitingMinutes: safeWaiting,
-    billableWaitingMinutes,
-    waitingCharge,
     totalFare,
   };
 }
