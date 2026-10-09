@@ -1,5 +1,7 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
+import fs from "fs";
+import path from "path";
 import { db } from "@/lib/db";
 import { CAB_TYPES } from "@/lib/fare";
 
@@ -12,7 +14,8 @@ export interface BookingLike {
   email?: string | null;
   pickupLocation: string;
   dropLocation: string;
-  pickupTime: string | Date;
+  tripType?: string | null;
+  pickupTime: string | Date | null;
   cabType: string;
   passengers: number;
   distanceKm: number;
@@ -34,10 +37,34 @@ const SMTP_PORT = Number(process.env.SMTP_PORT ?? 465);
 const SMTP_USER = process.env.SMTP_USER ?? "";
 const SMTP_PASS = process.env.SMTP_PASS ?? "";
 
-export const EMAIL_RECIPIENT = ADMIN_EMAIL;
+/**
+ * Fallback credentials from email.config.json (git-ignored).
+ * Safety net for environments where .env gets reset by tooling —
+ * email delivery should never silently stop working.
+ */
+function readConfigFileFallback(): { user: string; pass: string; admin: string } {
+  try {
+    const raw = fs.readFileSync(path.join(process.cwd(), "email.config.json"), "utf8");
+    const cfg = JSON.parse(raw) as Record<string, string>;
+    return {
+      user: cfg.SMTP_USER ?? "",
+      pass: cfg.SMTP_PASS ?? "",
+      admin: cfg.ADMIN_EMAIL ?? "",
+    };
+  } catch {
+    return { user: "", pass: "", admin: "" };
+  }
+}
+
+const fileFallback = readConfigFileFallback();
+const EMAIL_FROM = SMTP_USER || fileFallback.user;
+const EMAIL_PASS = SMTP_PASS || fileFallback.pass;
+const EMAIL_TO = ADMIN_EMAIL || fileFallback.admin || "sivaharish2k1@gmail.com";
+
+export const EMAIL_RECIPIENT = EMAIL_TO;
 
 export function isEmailConfigured(): boolean {
-  return Boolean(SMTP_USER && SMTP_PASS);
+  return Boolean(EMAIL_FROM && EMAIL_PASS);
 }
 
 let cachedTransporter: Transporter | null = null;
@@ -49,7 +76,7 @@ function getTransporter(): Transporter | null {
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: SMTP_PORT === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
+      auth: { user: EMAIL_FROM, pass: EMAIL_PASS },
       // Never let a slow SMTP server hang the API for long
       connectionTimeout: 8000,
       greetingTimeout: 8000,
@@ -67,7 +94,8 @@ function formatINR(n: number): string {
   }).format(n);
 }
 
-function formatDateTime(d: Date | string): string {
+function formatDateTime(d: Date | string | null): string {
+  if (!d) return "Flexible — we'll call to schedule";
   return new Date(d).toLocaleString("en-IN", {
     weekday: "short",
     day: "numeric",
@@ -81,6 +109,7 @@ function formatDateTime(d: Date | string): string {
 
 function buildEmailHtml(b: BookingLike): string {
   const cab = CAB_TYPES.find((c) => c.id === b.cabType);
+  const isRoundTrip = b.tripType === "ROUND_TRIP";
   const row = (label: string, value: string) =>
     `<tr>
       <td style="padding:8px 12px;color:#737373;font-size:13px;white-space:nowrap;">${label}</td>
@@ -108,12 +137,13 @@ function buildEmailHtml(b: BookingLike): string {
         ${row("Passenger", b.passengerName)}
         ${row("Phone", b.phone)}
         ${b.email ? row("Email", b.email) : ""}
+        ${row("Trip type", isRoundTrip ? "Round trip ↔" : "One way")}
         ${row("Pickup", b.pickupLocation)}
         ${row("Drop", b.dropLocation)}
         ${row("Pickup time", formatDateTime(b.pickupTime))}
         ${row("Cab", `${cab?.name ?? b.cabType} (${b.passengers} pax)`)}
-        ${row("Distance", `${b.distanceKm} km`)}
-        ${row("Waiting time", `${b.waitingMinutes} min`)}
+        ${row("Distance", `${b.distanceKm} km${isRoundTrip ? " (total)" : ""}`)}
+        ${b.waitingMinutes > 0 ? row("Waiting time", `${b.waitingMinutes} min`) : ""}
         ${row("Fare breakdown", `Base ${formatINR(b.baseFare)} + Distance ${formatINR(b.distanceFare)}${b.waitingCharge > 0 ? ` + Waiting ${formatINR(b.waitingCharge)}` : ""}`)}
         ${row("Total fare", formatINR(b.totalFare))}
       </table>
@@ -132,10 +162,11 @@ function buildEmailText(b: BookingLike): string {
   return [
     `New QuickCab booking ${b.bookingRef}`,
     `Passenger: ${b.passengerName} (${b.phone})`,
+    `Trip type: ${b.tripType === "ROUND_TRIP" ? "Round trip" : "One way"}`,
     `Route: ${b.pickupLocation} → ${b.dropLocation}`,
     `Pickup time: ${formatDateTime(b.pickupTime)}`,
     `Cab: ${cab?.name ?? b.cabType}, ${b.passengers} passenger(s)`,
-    `Distance: ${b.distanceKm} km, Waiting: ${b.waitingMinutes} min`,
+    `Distance: ${b.distanceKm} km${b.waitingMinutes > 0 ? `, Waiting: ${b.waitingMinutes} min` : ""}`,
     `Total fare: ${formatINR(b.totalFare)}`,
   ].join("\n");
 }
@@ -146,7 +177,8 @@ function buildEmailText(b: BookingLike): string {
  * Fire-and-forget friendly.
  */
 export async function notifyAdminNewBooking(booking: BookingLike): Promise<void> {
-  const subject = `🚕 New booking ${booking.bookingRef} — ${booking.passengerName} (${formatINR(booking.totalFare)})`;
+  const isRoundTrip = booking.tripType === "ROUND_TRIP";
+  const subject = `🚕 ${isRoundTrip ? "Round trip" : "New booking"} ${booking.bookingRef} — ${booking.passengerName} (${formatINR(booking.totalFare)})`;
   const html = buildEmailHtml(booking);
   const text = buildEmailText(booking);
 
@@ -161,8 +193,8 @@ export async function notifyAdminNewBooking(booking: BookingLike): Promise<void>
         "SMTP not configured — set SMTP_USER and SMTP_PASS in .env to enable real email delivery";
     } else {
       await transporter.sendMail({
-        from: `"QuickCab Bookings" <${SMTP_USER}>`,
-        to: ADMIN_EMAIL,
+        from: `"QuickCab Bookings" <${EMAIL_FROM}>`,
+        to: EMAIL_TO,
         subject,
         text,
         html,
@@ -177,7 +209,7 @@ export async function notifyAdminNewBooking(booking: BookingLike): Promise<void>
   try {
     await db.emailLog.create({
       data: {
-        toAddress: ADMIN_EMAIL,
+        toAddress: EMAIL_TO,
         subject,
         status,
         error,
@@ -192,7 +224,7 @@ export async function notifyAdminNewBooking(booking: BookingLike): Promise<void>
         type: activityType,
         message:
           status === "SENT"
-            ? `Booking notification emailed to ${ADMIN_EMAIL} for ${booking.bookingRef}`
+            ? `Booking notification emailed to ${EMAIL_TO} for ${booking.bookingRef}`
             : status === "SKIPPED"
               ? `Email notification for ${booking.bookingRef} skipped — SMTP not configured`
               : `Email notification for ${booking.bookingRef} failed: ${error ?? "unknown error"}`,

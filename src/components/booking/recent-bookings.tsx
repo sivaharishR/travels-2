@@ -128,6 +128,11 @@ export function RecentBookings({ version }: { version: number }) {
                         {b.bookingRef}
                       </span>
                       <StatusBadge status={b.status} />
+                      {b.tripType === "ROUND_TRIP" && (
+                        <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+                          ↔ Round trip
+                        </span>
+                      )}
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <CarTaxiFront className="size-3.5" />
                         {cab?.name ?? b.cabType} · {b.passengers}{" "}
@@ -147,14 +152,18 @@ export function RecentBookings({ version }: { version: number }) {
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <CalendarClock className="size-3.5" />
-                        {format(new Date(b.pickupTime), "EEE, d MMM · h:mm a")}
+                        {b.pickupTime
+                          ? format(new Date(b.pickupTime), "EEE, d MMM · h:mm a")
+                          : "Flexible pickup"}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3.5" />
-                        Wait: {b.waitingMinutes} min
-                      </span>
+                      {b.tripType !== "ROUND_TRIP" && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="size-3.5" />
+                          Wait: {b.waitingMinutes} min
+                        </span>
+                      )}
                       <span>
-                        {b.distanceKm} km
+                        {b.distanceKm} km{b.tripType === "ROUND_TRIP" ? " total" : ""}
                       </span>
                     </div>
                   </div>

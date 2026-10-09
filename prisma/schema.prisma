@@ -18,7 +18,8 @@ model Booking {
   email          String?
   pickupLocation String
   dropLocation   String
-  pickupTime     DateTime
+  tripType       String   @default("ONE_WAY")
+  pickupTime     DateTime?
   cabType        String
   passengers     Int      @default(1)
   distanceKm     Float

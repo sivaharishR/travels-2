@@ -302,10 +302,17 @@ export function AdminDashboard({ token, onLogout }: AdminDashboardProps) {
                               {cab?.icon} {cab?.name ?? b.cabType}
                               <span className="block text-xs text-muted-foreground">
                                 {b.passengers} pax
+                                {b.tripType === "ROUND_TRIP" && (
+                                  <span className="font-medium text-amber-700"> · ↔ Round trip</span>
+                                )}
                               </span>
                             </TableCell>
                             <TableCell className="whitespace-nowrap">
-                              {format(new Date(b.pickupTime), "d MMM, h:mm a")}
+                              {b.pickupTime ? (
+                                format(new Date(b.pickupTime), "d MMM, h:mm a")
+                              ) : (
+                                <span className="text-muted-foreground">Flexible</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-right whitespace-nowrap">
                               {b.waitingMinutes} min

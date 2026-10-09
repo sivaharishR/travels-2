@@ -6,7 +6,7 @@ import {
   CarTaxiFront,
   ShieldCheck,
   Clock3,
-  BadgeIndianRupee,
+  ArrowLeftRight,
   Star,
   MapPinned,
   Timer,
@@ -30,19 +30,19 @@ const FEATURES = [
     icon: MapPinned,
     title: "Easy booking",
     description:
-      "Enter pickup and drop — we auto-estimate your trip distance and show the fare instantly.",
+      "Enter pickup and drop, pick your cab and confirm — takes less than a minute.",
   },
   {
-    icon: BadgeIndianRupee,
-    title: "Transparent fares",
+    icon: ArrowLeftRight,
+    title: "One way or round trip",
     description:
-      "Clear base fare, per-km rate and waiting charges. No surge surprises, ever.",
+      "City rides when you need them, outstation round trips from 350 km. Your call.",
   },
   {
     icon: Clock3,
-    title: "Flexible waiting",
+    title: "Flexible scheduling",
     description:
-      "Tell us how long the cab should wait at pickup. First 5 minutes are always free.",
+      "Fix a pickup time for one-way rides, or let us call you to plan the departure.",
   },
   {
     icon: ShieldCheck,
@@ -160,8 +160,8 @@ export default function Home() {
                   </span>
                 </h1>
                 <p className="text-lg text-muted-foreground">
-                  Enter your pickup and drop, choose a waiting time, and get an instant
-                  fare — no calls, no haggling.
+                  One way or round trip — book in under a minute, no calls, no
+                  haggling.
                 </p>
               </motion.div>
               <motion.div
@@ -179,7 +179,7 @@ export default function Home() {
               </motion.div>
             </section>
 
-            {/* Booking form + fare summary */}
+            {/* Booking form */}
             <section className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6">
               <BookingSection onBooked={() => setBookingsVersion((v) => v + 1)} />
             </section>

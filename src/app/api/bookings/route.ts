@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { calculateFare, generateBookingRef } from "@/lib/fare";
+import {
+  calculateFare,
+  generateBookingRef,
+  ROUND_TRIP_MIN_KM,
+  ROUND_TRIP_MAX_KM,
+  ONE_WAY_MAX_KM,
+} from "@/lib/fare";
 import { notifyAdminNewBooking } from "@/lib/mailer";
 
 // GET /api/bookings - list the most recent bookings
@@ -23,7 +29,8 @@ export async function GET() {
 // POST /api/bookings - create a new booking
 // Body: {
 //   passengerName, phone, email?, pickupLocation, dropLocation,
-//   pickupTime (ISO string), cabType, passengers?, distanceKm, waitingMinutes
+//   tripType ("ONE_WAY" | "ROUND_TRIP"), pickupTime (ISO, one-way only),
+//   cabType, passengers?, distanceKm, waitingMinutes (one-way only)
 // }
 export async function POST(request: NextRequest) {
   try {
@@ -35,9 +42,14 @@ export async function POST(request: NextRequest) {
     const pickupLocation = String(body.pickupLocation ?? "").trim();
     const dropLocation = String(body.dropLocation ?? "").trim();
     const cabType = String(body.cabType ?? "").trim();
+    const tripType =
+      String(body.tripType ?? "ONE_WAY").trim().toUpperCase() === "ROUND_TRIP"
+        ? "ROUND_TRIP"
+        : "ONE_WAY";
     const passengers = Math.max(1, Math.min(6, Number(body.passengers) || 1));
     const distanceKm = Number(body.distanceKm) || 0;
-    const waitingMinutes = Number(body.waitingMinutes) || 0;
+    // Round trips don't collect waiting time — force 0 server-side
+    const waitingMinutes = tripType === "ROUND_TRIP" ? 0 : Number(body.waitingMinutes) || 0;
 
     // --- Validation ---
     const errors: string[] = [];
@@ -55,29 +67,36 @@ export async function POST(request: NextRequest) {
       errors.push("Pickup and drop locations cannot be the same");
     if (!distanceKm || distanceKm <= 0)
       errors.push("Trip distance must be greater than 0");
-    if (distanceKm > 500) errors.push("Trip distance cannot exceed 500 km");
-
-    let pickupTime: Date | null = null;
-    if (body.pickupTime) {
-      const d = new Date(body.pickupTime);
-      if (isNaN(d.getTime())) {
-        errors.push("Invalid pickup date/time");
-      } else {
-        pickupTime = d;
-      }
+    if (tripType === "ROUND_TRIP") {
+      if (distanceKm > 0 && distanceKm < ROUND_TRIP_MIN_KM)
+        errors.push(
+          `Round trips have a minimum distance of ${ROUND_TRIP_MIN_KM} km`
+        );
+      if (distanceKm > ROUND_TRIP_MAX_KM)
+        errors.push(`Trip distance cannot exceed ${ROUND_TRIP_MAX_KM} km`);
     } else {
-      errors.push("Pickup date/time is required");
+      if (distanceKm > ONE_WAY_MAX_KM)
+        errors.push(`Trip distance cannot exceed ${ONE_WAY_MAX_KM} km`);
+    }
+
+    // Pickup time is only collected for one-way trips; round trips are
+    // scheduled flexibly with the customer.
+    let pickupTime: Date | null = null;
+    if (tripType === "ONE_WAY") {
+      if (body.pickupTime) {
+        const d = new Date(body.pickupTime);
+        if (isNaN(d.getTime())) {
+          errors.push("Invalid pickup date/time");
+        } else {
+          pickupTime = d;
+        }
+      } else {
+        errors.push("Pickup date/time is required");
+      }
     }
 
     if (errors.length > 0) {
       return NextResponse.json({ error: errors.join(", ") }, { status: 400 });
-    }
-
-    if (!pickupTime) {
-      return NextResponse.json(
-        { error: "Pickup date/time is required" },
-        { status: 400 }
-      );
     }
 
     const fare = calculateFare(cabType, distanceKm, waitingMinutes);
@@ -90,6 +109,7 @@ export async function POST(request: NextRequest) {
         email,
         pickupLocation,
         dropLocation,
+        tripType,
         pickupTime,
         cabType,
         passengers,
@@ -107,7 +127,7 @@ export async function POST(request: NextRequest) {
     await db.activityLog.create({
       data: {
         type: "BOOKING_CREATED",
-        message: `Booking ${booking.bookingRef} created — ${passengerName}, ${pickupLocation} → ${dropLocation} (${cabType}, ₹${fare.totalFare})`,
+        message: `Booking ${booking.bookingRef} created — ${passengerName}, ${pickupLocation} → ${dropLocation} (${cabType}, ${tripType === "ROUND_TRIP" ? "round trip, " : ""}₹${fare.totalFare})`,
         bookingRef: booking.bookingRef,
       },
     });

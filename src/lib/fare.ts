@@ -2,7 +2,7 @@
 // Used by both the estimate API and the booking creation API
 // so pricing is always consistent (never trust client-side math).
 
-export type CabTypeId = "hatchback" | "sedan" | "suv" | "luxury";
+export type CabTypeId = "sedan" | "suv" | "luxury";
 
 export interface CabType {
   id: CabTypeId;
@@ -15,15 +15,6 @@ export interface CabType {
 }
 
 export const CAB_TYPES: CabType[] = [
-  {
-    id: "hatchback",
-    name: "Hatchback",
-    description: "Budget friendly rides for short city trips",
-    seats: 4,
-    baseFare: 50,
-    perKm: 12,
-    icon: "🚗",
-  },
   {
     id: "sedan",
     name: "Sedan",
@@ -57,6 +48,12 @@ export const CAB_TYPES: CabType[] = [
 export const FREE_WAITING_MINUTES = 5;
 export const WAITING_CHARGE_PER_MIN = 2;
 
+// Round trip policy: minimum total distance, and a generous sanity cap
+// ("no maximum" for customers — the cap only guards against data errors)
+export const ROUND_TRIP_MIN_KM = 350;
+export const ROUND_TRIP_MAX_KM = 5000;
+export const ONE_WAY_MAX_KM = 500;
+
 export function getCabType(id: string): CabType | undefined {
   return CAB_TYPES.find((c) => c.id === id);
 }
@@ -77,7 +74,7 @@ export function calculateFare(
   waitingMinutes: number
 ): FareBreakdown {
   const cab = getCabType(cabTypeId) ?? CAB_TYPES[0];
-  const safeDistance = Math.max(1, Math.min(500, distanceKm || 0));
+  const safeDistance = Math.max(1, Math.min(ROUND_TRIP_MAX_KM, distanceKm || 0));
   const safeWaiting = Math.max(0, Math.min(240, waitingMinutes || 0));
 
   const distanceFare = round2(safeDistance * cab.perKm);

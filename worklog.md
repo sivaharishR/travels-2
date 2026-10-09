@@ -84,3 +84,23 @@ Stage Summary:
 - Gmail notifications are LIVE: every new booking now emails the full details (ref, passenger, route, pickup time, cab, waiting time, fare breakdown) to sivaharish2k1@gmail.com from that same Gmail account.
 - Delivery attempts are auditable in the admin Emails tab (Sent / Not sent / Failed with error details) and Activity feed; email sending remains fire-and-forget and can never block or fail a booking.
 - Note: the App Password is stored only in .env (git-ignored). If Gmail later rejects it (revoked/expired), the Emails tab will show FAILED with the SMTP error and a new App Password can be pasted into .env, followed by a dev server restart.
+---
+Task ID: 5
+Agent: Z.ai Code (main)
+Task: Add round trip option (min 350 km, no max), drop waiting time & pickup time for round trips; remove per-km rates, hatchback, and the fare summary panel.
+
+Work Log:
+- Prisma schema: Booking gained tripType (default "ONE_WAY"); pickupTime is now nullable (round trips are scheduled by phone). Pushed DB + regenerated client.
+- lib/fare.ts: removed hatchback (CAB_TYPES now Sedan/SUV/Luxury); added ROUND_TRIP_MIN_KM=350, ROUND_TRIP_MAX_KM=5000 (sanity cap), ONE_WAY_MAX_KM=500; calculateFare clamp raised to 5000 so long round trips price correctly.
+- booking-form.tsx rewritten: trip-type chips (One way / Round trip) at the top of Trip Details; round trip mode hides pickup date/time + waiting chips, shows "we'll call you to schedule" notes, distance defaults/clamps to 350 km (slider 350–2000 step 5, input cap 5000); zod superRefine keeps pickup time required for one-way only; cab cards show name/seats/description only (no ₹ or ₹/km); sticky Fare summary panel removed (section is now single-column, submit button always visible); confirmation dialog shows Trip type, "Flexible — we'll call you" for round trips, hides waiting row.
+- POST /api/bookings: parses tripType, forces waitingMinutes=0 for round trips, requires pickupTime only for one-way, enforces min 350 km (round trip) / max 500 km (one-way); activity log includes "round trip".
+- mailer.ts: subject prefixed "Round trip"; email adds Trip type row, "(total)" on distance, omits waiting row when 0, "Flexible — we'll call to schedule" for null pickup time.
+- recent-bookings.tsx + admin-dashboard.tsx: round trip badge, "Flexible pickup"/"Flexible" for null times, distance suffix "total"; booking type updated (tripType, pickupTime nullable).
+- page.tsx hero/features copy updated (no more "instant fare" / "per-km rate" claims; new "One way or round trip" feature card with ArrowLeftRight; BadgeIndianRupee import swapped).
+- INCIDENT: .env was wiped back to DATABASE_URL-only at 13:53 (coincides with db:push run) → 3 bookings QC-98QZ6B/QC-SUK5FU/QC-HJQU3R logged SKIPPED emails. Restored .env (chmod 600) AND added git-ignored email.config.json fallback that mailer.ts reads when SMTP env vars are missing (verified isEmailConfigured()=true with stripped env). New booking QC-5B47AR (round trip 640 km sedan ₹9,675) → EmailLog [SENT] with "🚕 Round trip ..." subject.
+- Browser-verified: no hatchback/rates/fare summary; round trip toggle hides waiting+pickup and sets 350 km; round trip UI booking QC-98QZ6B confirmed; one-way UI booking QC-HJQU3R (15 min wait, ₹411.50) still works; API rejects round trip 100 km with "Round trips have a minimum distance of 350 km" (400); admin table shows ↔ Round trip badge + Flexible pickup; Emails tab shows SENT entries; mobile 390px layout clean; zero console errors. Lint clean.
+
+Stage Summary:
+- Round trips are first-class: One way / Round trip chips; round trip = min 350 km (no practical max), no waiting time, no pickup time (flexible, scheduled by call); one-way behaves exactly as before.
+- Hatchback removed; cab cards and fare summary no longer show any prices (fare still computed server-side for admin + emails + confirmation dialog total).
+- Email notification pipeline hardened with a config-file fallback so .env wipes can't silently stop admin notifications.
