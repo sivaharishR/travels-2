@@ -3,9 +3,8 @@ import { db } from "@/lib/db";
 import {
   calculateFare,
   generateBookingRef,
-  ROUND_TRIP_MIN_KM,
-  ROUND_TRIP_MAX_KM,
-  ONE_WAY_MAX_KM,
+  MIN_TRIP_KM,
+  MAX_TRIP_KM,
 } from "@/lib/fare";
 import { notifyAdminNewBooking } from "@/lib/mailer";
 
@@ -64,18 +63,13 @@ export async function POST(request: NextRequest) {
       errors.push("Drop location must be at least 3 characters");
     if (pickupLocation.toLowerCase() === dropLocation.toLowerCase())
       errors.push("Pickup and drop locations cannot be the same");
-    if (!distanceKm || distanceKm <= 0)
+    if (!distanceKm || distanceKm <= 0) {
       errors.push("Trip distance must be greater than 0");
-    if (tripType === "ROUND_TRIP") {
-      if (distanceKm > 0 && distanceKm < ROUND_TRIP_MIN_KM)
-        errors.push(
-          `Round trips have a minimum distance of ${ROUND_TRIP_MIN_KM} km`
-        );
-      if (distanceKm > ROUND_TRIP_MAX_KM)
-        errors.push(`Trip distance cannot exceed ${ROUND_TRIP_MAX_KM} km`);
-    } else {
-      if (distanceKm > ONE_WAY_MAX_KM)
-        errors.push(`Trip distance cannot exceed ${ONE_WAY_MAX_KM} km`);
+    } else if (distanceKm < MIN_TRIP_KM) {
+      // Both one-way and round trips share the same 300 km minimum
+      errors.push(`Trips have a minimum distance of ${MIN_TRIP_KM} km`);
+    } else if (distanceKm > MAX_TRIP_KM) {
+      errors.push(`Trip distance cannot exceed ${MAX_TRIP_KM} km`);
     }
 
     if (errors.length > 0) {

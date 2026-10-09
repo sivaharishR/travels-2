@@ -129,3 +129,22 @@ Stage Summary:
 - Waiting time and pickup time are fully removed from UI, API, database, email templates and admin dashboard; booking flow is now: passenger details → trip type (one-way/round-trip) → locations → passengers → distance (round trip min 350 km, no practical max) → cab (Sedan/SUV/Luxury, no rates) → confirm.
 - Server-side total fare = base fare + distance × per-km rate; stored in DB for admin/receipt even though no rates are shown to customers.
 - Gmail notifications still fire for every booking (verified SENT for round trip and one-way).
+
+---
+Task ID: 6
+Agent: Z.ai Code (main)
+Task: Both one-way and round trips must have a minimum distance of 300 km (no practical maximum).
+
+Work Log:
+- src/lib/fare.ts: replaced ROUND_TRIP_MIN_KM=350 / ROUND_TRIP_MAX_KM=5000 / ONE_WAY_MAX_KM=500 with unified MIN_TRIP_KM=300 and MAX_TRIP_KM=5000 (sanity cap only) applying to BOTH trip types; calculateFare uses MAX_TRIP_KM guard.
+- src/app/api/bookings/route.ts: unified validation — distance < 300 rejected with "Trips have a minimum distance of 300 km" for one-way AND round trips; > 5000 rejected; one-way 500 km cap removed.
+- src/components/booking/booking-form.tsx: distance default now MIN_TRIP_KM (300) for both types; typing 250 clamps to 300; trip-type switch clamps into [300, 5000]; slider unified min 300 / max 2000 / step 5; number input step 1; removed the now-meaningless location auto-estimate (2-45 km values were below the new minimum) along with estimateDistanceKm, handleLocationBlur, distanceTouched state/ref; hint text unified to "Minimum 300 km — drag the slider or type the distance."; round-trip note updated to "Round trips cover the journey there and back — minimum 300 km total."
+- src/app/page.tsx: feature copy updated to "One way or round — every ride covers 300 km or more, with no upper limit."
+- bun run lint clean; dev server restarted (setsid).
+- API tests: one-way 250 → rejected; round trip 250 → rejected; one-way 320 → created QC-Y4G9CW; round trip 300 → created QC-2TRR49; one-way 600 → created QC-RCU4TD (cap removed).
+- Agent Browser E2E: default distance 300 on load; typing 250 clamps to 300; round-trip switch keeps 300; UI one-way booking QC-4DXM9J at 320 km confirmed (₹4,875 = 75 + 320×15); recent bookings list updates; zero page errors.
+
+Stage Summary:
+- Distance policy is now symmetric: minimum 300 km for one-way and round trips, no customer-facing maximum (5000 km server sanity cap).
+- Location-name auto-estimate removed (its 2-45 km outputs are impossible under the 300 km minimum); distance defaults to 300 km and users adjust via slider/input.
+- All booking surfaces (form, API, admin, emails) remain consistent; emails still fire for every booking.

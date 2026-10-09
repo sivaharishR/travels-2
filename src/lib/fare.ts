@@ -44,11 +44,11 @@ export const CAB_TYPES: CabType[] = [
   },
 ];
 
-// Round trip policy: minimum total distance, and a generous sanity cap
-// ("no maximum" for customers — the cap only guards against data errors)
-export const ROUND_TRIP_MIN_KM = 350;
-export const ROUND_TRIP_MAX_KM = 5000;
-export const ONE_WAY_MAX_KM = 500;
+// Trip distance policy — applies to BOTH one-way and round trips:
+// minimum 300 km, and a generous sanity cap ("no maximum" for customers —
+// the cap only guards against data errors)
+export const MIN_TRIP_KM = 300;
+export const MAX_TRIP_KM = 5000;
 
 export function getCabType(id: string): CabType | undefined {
   return CAB_TYPES.find((c) => c.id === id);
@@ -66,7 +66,7 @@ export function calculateFare(
   distanceKm: number
 ): FareBreakdown {
   const cab = getCabType(cabTypeId) ?? CAB_TYPES[0];
-  const safeDistance = Math.max(1, Math.min(ROUND_TRIP_MAX_KM, distanceKm || 0));
+  const safeDistance = Math.max(1, Math.min(MAX_TRIP_KM, distanceKm || 0));
 
   const distanceFare = round2(safeDistance * cab.perKm);
   const totalFare = round2(cab.baseFare + distanceFare);

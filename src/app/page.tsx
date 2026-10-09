@@ -36,7 +36,7 @@ const FEATURES = [
     icon: ArrowLeftRight,
     title: "One way or round trip",
     description:
-      "City rides when you need them, outstation round trips from 350 km. Your call.",
+      "One way or round — every ride covers 300 km or more, with no upper limit. Your call.",
   },
   {
     icon: Clock3,

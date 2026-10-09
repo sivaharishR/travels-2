@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -43,9 +43,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import {
   CAB_TYPES,
-  ROUND_TRIP_MIN_KM,
-  ROUND_TRIP_MAX_KM,
-  ONE_WAY_MAX_KM,
+  MIN_TRIP_KM,
+  MAX_TRIP_KM,
 } from "@/lib/fare";
 import { formatINR } from "@/lib/format";
 import type { Booking } from "@/types/booking";
@@ -67,15 +66,6 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-function estimateDistanceKm(a: string, b: string): number {
-  const s = `${a.trim().toLowerCase()}->${b.trim().toLowerCase()}`;
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  }
-  return Math.round((2 + (h % 4300) / 100) * 10) / 10; // 2.0 - 44.9 km
-}
-
 const TRIP_TYPE_CHIPS: { value: TripType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: "ONE_WAY", label: "One way", icon: ArrowRight },
   { value: "ROUND_TRIP", label: "Round trip", icon: ArrowLeftRight },
@@ -84,16 +74,13 @@ const TRIP_TYPE_CHIPS: { value: TripType; label: string; icon: React.ComponentTy
 export function BookingSection({ onBooked }: { onBooked?: () => void }) {
   const { toast } = useToast();
   const [cabType, setCabType] = useState<string>("sedan");
-  const [distanceKm, setDistanceKm] = useState<number>(8);
-  const [distanceTouched, setDistanceTouched] = useState<boolean>(false);
+  const [distanceKm, setDistanceKm] = useState<number>(MIN_TRIP_KM);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
-  const distanceTouchedRef = useRef<boolean>(false);
 
   const {
     register,
     handleSubmit,
-    getValues,
     setValue,
     watch,
     reset,
@@ -114,34 +101,17 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
   const tripType = watch("tripType") as TripType;
   const isRoundTrip = tripType === "ROUND_TRIP";
 
-  // Distance bounds depend on the trip type:
-  // one-way  → 1–500 km (existing behaviour)
-  // round trip → minimum 350 km, effectively no maximum
-  const distanceMin = isRoundTrip ? ROUND_TRIP_MIN_KM : 1;
-  const distanceMax = isRoundTrip ? ROUND_TRIP_MAX_KM : ONE_WAY_MAX_KM;
+  // Both one-way and round trips share the same distance bounds:
+  // minimum 300 km, effectively no maximum (5000 km sanity cap server-side)
+  const distanceMin = MIN_TRIP_KM;
+  const distanceMax = MAX_TRIP_KM;
 
   const setTripType = (t: TripType) => {
     setValue("tripType", t, { shouldValidate: true });
-    if (t === "ROUND_TRIP") {
-      // Round trips start at the 350 km minimum
-      setDistanceKm((prev) => Math.max(ROUND_TRIP_MIN_KM, Math.min(ROUND_TRIP_MAX_KM, prev)));
-    } else {
-      setDistanceKm((prev) => Math.min(ONE_WAY_MAX_KM, prev));
-    }
-  };
-
-  const handleLocationBlur = () => {
-    if (distanceTouchedRef.current || isRoundTrip) return; // no auto-estimate for round trips
-    const p = getValues("pickupLocation");
-    const d = getValues("dropLocation");
-    if (p.trim().length >= 3 && d.trim().length >= 3) {
-      setDistanceKm(estimateDistanceKm(p, d));
-    }
+    setDistanceKm((prev) => Math.max(distanceMin, Math.min(distanceMax, prev)));
   };
 
   const onSliderChange = (vals: number[]) => {
-    distanceTouchedRef.current = true;
-    setDistanceTouched(true);
     // Round to kill Radix slider float-normalization noise (e.g. 40.29999923706055)
     setDistanceKm(Math.round(vals[0] * 1000) / 1000);
   };
@@ -149,8 +119,6 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
   const onDistanceInput = (raw: string) => {
     const n = Number(raw);
     if (isNaN(n)) return;
-    distanceTouchedRef.current = true;
-    setDistanceTouched(true);
     const clamped = Math.round(Math.max(distanceMin, Math.min(distanceMax, n)) * 1000) / 1000;
     setDistanceKm(clamped);
   };
@@ -192,9 +160,7 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
         passengers: "1",
         tripType,
       });
-      distanceTouchedRef.current = false;
-      setDistanceTouched(false);
-      setDistanceKm(tripType === "ROUND_TRIP" ? ROUND_TRIP_MIN_KM : 8);
+      setDistanceKm(MIN_TRIP_KM);
     } catch (err) {
       toast({
         title: "Booking failed",
@@ -313,8 +279,7 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                 </div>
                 {isRoundTrip && (
                   <p className="text-xs text-amber-700">
-                    Round trips cover a minimum of {ROUND_TRIP_MIN_KM} km — we&apos;ll plan both
-                    legs of the journey with you.
+                    Round trips cover the journey there and back — minimum {MIN_TRIP_KM} km total.
                   </p>
                 )}
               </div>
@@ -329,7 +294,7 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                       placeholder="e.g. Indiranagar Metro Station"
                       className="pl-9"
                       aria-invalid={!!errors.pickupLocation}
-                      {...register("pickupLocation", { onBlur: handleLocationBlur })}
+                      {...register("pickupLocation")}
                     />
                   </div>
                   {errors.pickupLocation && (
@@ -345,7 +310,7 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                       placeholder="e.g. Kempegowda Airport T2"
                       className="pl-9"
                       aria-invalid={!!errors.dropLocation}
-                      {...register("dropLocation", { onBlur: handleLocationBlur })}
+                      {...register("dropLocation")}
                     />
                   </div>
                   {errors.dropLocation && (
@@ -396,7 +361,7 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                     type="number"
                     min={distanceMin}
                     max={distanceMax}
-                    step={isRoundTrip ? 1 : 0.5}
+                    step={1}
                     value={Math.round(distanceKm * 1000) / 1000}
                     onChange={(e) => onDistanceInput(e.target.value)}
                     className="h-8 w-20 text-right"
@@ -409,16 +374,12 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                 value={[Math.min(distanceMax, Math.max(distanceMin, distanceKm))]}
                 onValueChange={onSliderChange}
                 min={distanceMin}
-                max={isRoundTrip ? 2000 : 100}
-                step={isRoundTrip ? 5 : 1}
+                max={2000}
+                step={5}
                 aria-label="Trip distance slider"
               />
               <p className="text-xs text-muted-foreground">
-                {isRoundTrip
-                  ? `Round trip — minimum ${ROUND_TRIP_MIN_KM} km. Drag the slider or type the total distance.`
-                  : distanceTouched
-                    ? "Custom distance — drag the slider to adjust."
-                    : "Auto-estimated from your locations — adjust if needed."}
+                {`Minimum ${MIN_TRIP_KM} km${isRoundTrip ? " total" : ""} — drag the slider or type the distance.`}
               </p>
             </div>
 
