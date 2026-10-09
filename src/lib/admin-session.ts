@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 // useSyncExternalStore keeps the server snapshot (null) and client snapshot
 // in sync without calling setState inside effects (which React hooks lint forbids).
 
-const KEY = "quickcab_admin_token";
+const KEY = "vaitheeshwara_admin_token";
 
 const listeners = new Set<() => void>();
 

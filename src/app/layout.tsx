@@ -14,18 +14,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "QuickCab — Book Your City Ride Instantly",
+  title: "Vaitheeshwara Travels — Book Your Ride Instantly",
   description:
-    "Book a cab in seconds. Enter your details, pickup and drop location, pick one way or round trip and get an instant transparent fare.",
-  keywords: ["cab booking", "taxi", "ride booking", "QuickCab", "city rides", "airport transfer"],
-  authors: [{ name: "QuickCab" }],
+    "Book a cab with Vaitheeshwara Travels. Enter your details, pickup and drop location, pick one way or round trip and confirm in under a minute.",
+  keywords: ["cab booking", "taxi", "ride booking", "Vaitheeshwara Travels", "outstation cabs", "airport transfer"],
+  authors: [{ name: "Vaitheeshwara Travels" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "QuickCab — Book Your City Ride Instantly",
-    description: "Enter pickup & drop, choose one way or round trip, get an instant fare.",
-    siteName: "QuickCab",
+    title: "Vaitheeshwara Travels — Book Your Ride Instantly",
+    description: "Enter pickup & drop, choose one way or round trip and confirm your ride.",
+    siteName: "Vaitheeshwara Travels",
     type: "website",
   },
 };

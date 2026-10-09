@@ -36,7 +36,7 @@ const FEATURES = [
     icon: ArrowLeftRight,
     title: "One way or round trip",
     description:
-      "One way or round — every ride covers 300 km or more, with no upper limit. Your call.",
+      "One way or round — every ride covers 150 km or more, with no upper limit. Your call.",
   },
   {
     icon: Clock3,
@@ -76,8 +76,12 @@ export default function Home() {
               <CarTaxiFront className="size-6 text-black" />
             </span>
             <span className="flex flex-col leading-tight">
-              <span className="text-lg font-extrabold tracking-tight">QuickCab</span>
-              <span className="text-xs text-muted-foreground">City taxi booking</span>
+              <span className="text-sm font-extrabold tracking-tight sm:text-lg">
+                Vaitheeshwara Travels
+              </span>
+              <span className="hidden text-xs text-muted-foreground sm:block">
+                Travels &amp; outstation cabs
+              </span>
             </span>
           </a>
           <nav aria-label="Main navigation" className="flex items-center gap-2 sm:gap-4">
@@ -222,10 +226,10 @@ export default function Home() {
             suppressHydrationWarning
           >
             <CarTaxiFront className="size-4 text-amber-600" />
-            © {new Date().getFullYear()} QuickCab — fast, fair city rides.
+            © {new Date().getFullYear()} Vaitheeshwara Travels — safe, comfortable journeys.
           </p>
           <p>
-            Support: <span className="font-medium text-foreground">1800-QUICK-CAB</span>
+            Support: <span className="font-medium text-foreground">vaitheeswaratravels@gmail.com</span>
           </p>
         </div>
       </footer>

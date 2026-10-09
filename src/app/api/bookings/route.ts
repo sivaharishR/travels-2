@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     if (!distanceKm || distanceKm <= 0) {
       errors.push("Trip distance must be greater than 0");
     } else if (distanceKm < MIN_TRIP_KM) {
-      // Both one-way and round trips share the same 300 km minimum
+      // Both one-way and round trips share the same 150 km minimum
       errors.push(`Trips have a minimum distance of ${MIN_TRIP_KM} km`);
     } else if (distanceKm > MAX_TRIP_KM) {
       errors.push(`Trip distance cannot exceed ${MAX_TRIP_KM} km`);

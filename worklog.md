@@ -148,3 +148,25 @@ Stage Summary:
 - Distance policy is now symmetric: minimum 300 km for one-way and round trips, no customer-facing maximum (5000 km server sanity cap).
 - Location-name auto-estimate removed (its 2-45 km outputs are impossible under the 300 km minimum); distance defaults to 300 km and users adjust via slider/input.
 - All booking surfaces (form, API, admin, emails) remain consistent; emails still fire for every booking.
+---
+Task ID: 7
+Agent: Z.ai Code (main)
+Task: Add vaitheeswaratravels@gmail.com as a second admin notification recipient; show "Toll, Permit & Parking charges are separate from this fare" in the booking confirmation popup; lower the minimum booking distance to 150 km for both trip types; rebrand QuickCab → Vaitheeshwara Travels.
+
+Work Log:
+- mailer.ts: replaced single ADMIN_EMAIL with a multi-recipient pipeline — ADMIN_EMAILS (comma separated) → ADMIN_EMAIL → email.config.json (ADMIN_EMAILS/ADMIN_EMAIL) → built-in default ["sivaharish2k1@gmail.com","vaitheeswaratravels@gmail.com"]; recipients are parsed/validated and sent via one sendMail (comma-joined "to"); EmailLog.toAddress records the full list.
+- .env + email.config.json (git-ignored): ADMIN_EMAILS=sivaharish2k1@gmail.com,vaitheeswaratravels@gmail.com (SMTP creds unchanged).
+- booking-form.tsx: confirmation dialog now shows an amber Info note "Toll, Permit & Parking charges are separate from this fare." directly under Total fare (Info icon added to imports).
+- fare.ts: MIN_TRIP_KM 300 → 150 (applies to BOTH one-way and round trips; MAX_TRIP_KM 5000 sanity cap unchanged); booking refs now VT- prefixed (was QC-).
+- api/bookings/route.ts: min-distance message auto-updates via constant ("Trips have a minimum distance of 150 km"); no other logic change needed.
+- Rebrand: layout.tsx metadata (title/description/keywords/authors/openGraph), page.tsx header ("Vaitheeshwara Travels" + tagline "Travels & outstation cabs", tagline hidden on mobile to fit the 64px header), footer ("safe, comfortable journeys", Support: vaitheeswaratravels@gmail.com), feature copy 150 km; mailer.ts email header/from/text ("Vaitheeshwara Travels — New Booking", "Vaitheeshwara Travels Bookings" sender); admin default password quickcab123 → vaithees123 (admin-auth.ts + login dialog hint) and sessionStorage key vaitheeshwara_admin_token (invalidates old sessions by design).
+- Restarted dev server (setsid) to load .env; bun run lint clean.
+- API tests: one-way 140 → rejected ("minimum distance of 150 km"); one-way 150 → created VT-YQHP8P ₹2,325; round trip 149 → rejected; round trip 150 → created VT-C4FAFJ ₹3,110; admin login with new password OK.
+- EmailLog verified: VT-YQHP8P / VT-C4FAFJ / VT-CV6UHW all [SENT] to "sivaharish2k1@gmail.com, vaitheeswaratravels@gmail.com" (old QC- entries kept single address, as expected).
+- Agent Browser E2E: page title + header brand updated; distance defaults to 150; UI booking VT-CV6UHW confirmed with popup showing the Toll/Permit/Parking note (screenshot-verified); admin dashboard Emails tab shows both recipients [Sent]; round-trip note "minimum 150 km total"; mobile 390px header tightened and layout clean; zero console/page errors.
+
+Stage Summary:
+- Booking notifications now go to BOTH sivaharish2k1@gmail.com and vaitheeswaratravels@gmail.com (verified SENT).
+- Confirmation popup informs customers that Toll, Permit & Parking charges are separate from the quoted fare.
+- Minimum distance is 150 km for one-way AND round trips (no customer-facing maximum).
+- Site fully rebranded to Vaitheeshwara Travels (UI, metadata, emails, VT- booking refs, admin credentials admin / vaithees123).

@@ -19,6 +19,7 @@ import {
   ArrowLeftRight,
   BadgeCheck,
   PhoneCall,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,7 +103,7 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
   const isRoundTrip = tripType === "ROUND_TRIP";
 
   // Both one-way and round trips share the same distance bounds:
-  // minimum 300 km, effectively no maximum (5000 km sanity cap server-side)
+  // minimum 150 km, effectively no maximum (5000 km sanity cap server-side)
   const distanceMin = MIN_TRIP_KM;
   const distanceMax = MAX_TRIP_KM;
 
@@ -513,6 +514,10 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                       {formatINR(confirmedBooking.totalFare)}
                     </span>
                   </div>
+                  <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                    <Info className="mt-0.5 size-3.5 shrink-0" />
+                    Toll, Permit &amp; Parking charges are separate from this fare.
+                  </p>
                 </div>
                 <Button
                   className="w-full cursor-pointer bg-amber-400 font-bold text-black hover:bg-amber-500"

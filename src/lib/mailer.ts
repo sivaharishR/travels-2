@@ -28,7 +28,6 @@ export interface BookingLike {
 // booking is created. Delivery status is always recorded in EmailLog
 // (and surfaced in the admin dashboard), even when SMTP is not configured.
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "sivaharish2k1@gmail.com";
 const SMTP_HOST = process.env.SMTP_HOST ?? "smtp.gmail.com";
 const SMTP_PORT = Number(process.env.SMTP_PORT ?? 465);
 const SMTP_USER = process.env.SMTP_USER ?? "";
@@ -46,7 +45,7 @@ function readConfigFileFallback(): { user: string; pass: string; admin: string }
     return {
       user: cfg.SMTP_USER ?? "",
       pass: cfg.SMTP_PASS ?? "",
-      admin: cfg.ADMIN_EMAIL ?? "",
+      admin: cfg.ADMIN_EMAILS ?? cfg.ADMIN_EMAIL ?? "",
     };
   } catch {
     return { user: "", pass: "", admin: "" };
@@ -56,7 +55,29 @@ function readConfigFileFallback(): { user: string; pass: string; admin: string }
 const fileFallback = readConfigFileFallback();
 const EMAIL_FROM = SMTP_USER || fileFallback.user;
 const EMAIL_PASS = SMTP_PASS || fileFallback.pass;
-const EMAIL_TO = ADMIN_EMAIL || fileFallback.admin || "sivaharish2k1@gmail.com";
+
+// Comma separated list of admin addresses that receive every booking
+// notification (e.g. "a@gmail.com,b@gmail.com").
+const DEFAULT_RECIPIENTS = ["sivaharish2k1@gmail.com", "vaitheeswaratravels@gmail.com"];
+
+function parseRecipients(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s));
+}
+
+const RECIPIENTS: string[] =
+  parseRecipients(process.env.ADMIN_EMAILS).length > 0
+    ? parseRecipients(process.env.ADMIN_EMAILS)
+    : parseRecipients(process.env.ADMIN_EMAIL).length > 0
+      ? parseRecipients(process.env.ADMIN_EMAIL)
+      : parseRecipients(fileFallback.admin).length > 0
+        ? parseRecipients(fileFallback.admin)
+        : DEFAULT_RECIPIENTS;
+
+const EMAIL_TO = RECIPIENTS.join(", ");
 
 export const EMAIL_RECIPIENT = EMAIL_TO;
 
@@ -118,7 +139,7 @@ function buildEmailHtml(b: BookingLike): string {
 <body style="margin:0;padding:0;background-color:#fafaf9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:24px 16px;">
     <div style="background:#fbbf24;border-radius:16px 16px 0 0;padding:20px 24px;">
-      <span style="font-size:20px;font-weight:800;color:#171717;">🚕 QuickCab — New Booking</span>
+      <span style="font-size:20px;font-weight:800;color:#171717;">🚕 Vaitheeshwara Travels — New Booking</span>
     </div>
     <div style="background:#ffffff;border:1px solid #e5e5e5;border-top:none;border-radius:0 0 16px 16px;padding:24px;">
       <p style="margin:0 0 16px;font-size:14px;color:#525252;">
@@ -144,7 +165,7 @@ function buildEmailHtml(b: BookingLike): string {
       </table>
 
       <p style="margin:16px 0 0;font-size:12px;color:#a3a3a3;text-align:center;">
-        Sent automatically by QuickCab · ${formatDateTime(new Date())}
+        Sent automatically by Vaitheeshwara Travels · ${formatDateTime(new Date())}
       </p>
     </div>
   </div>
@@ -155,7 +176,7 @@ function buildEmailHtml(b: BookingLike): string {
 function buildEmailText(b: BookingLike): string {
   const cab = CAB_TYPES.find((c) => c.id === b.cabType);
   return [
-    `New QuickCab booking ${b.bookingRef}`,
+    `New Vaitheeshwara Travels booking ${b.bookingRef}`,
     `Passenger: ${b.passengerName} (${b.phone})`,
     `Trip type: ${b.tripType === "ROUND_TRIP" ? "Round trip" : "One way"}`,
     `Route: ${b.pickupLocation} → ${b.dropLocation}`,
@@ -187,7 +208,7 @@ export async function notifyAdminNewBooking(booking: BookingLike): Promise<void>
         "SMTP not configured — set SMTP_USER and SMTP_PASS in .env to enable real email delivery";
     } else {
       await transporter.sendMail({
-        from: `"QuickCab Bookings" <${EMAIL_FROM}>`,
+        from: `"Vaitheeshwara Travels Bookings" <${EMAIL_FROM}>`,
         to: EMAIL_TO,
         subject,
         text,

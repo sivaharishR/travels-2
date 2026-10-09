@@ -45,9 +45,9 @@ export const CAB_TYPES: CabType[] = [
 ];
 
 // Trip distance policy — applies to BOTH one-way and round trips:
-// minimum 300 km, and a generous sanity cap ("no maximum" for customers —
+// minimum 150 km, and a generous sanity cap ("no maximum" for customers —
 // the cap only guards against data errors)
-export const MIN_TRIP_KM = 300;
+export const MIN_TRIP_KM = 150;
 export const MAX_TRIP_KM = 5000;
 
 export function getCabType(id: string): CabType | undefined {
@@ -83,12 +83,12 @@ export function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-// Generates a short human friendly booking reference, e.g. QC-8F3K2D
+// Generates a short human friendly booking reference, e.g. VT-8F3K2D
 export function generateBookingRef(): string {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   let code = "";
   for (let i = 0; i < 6; i++) {
     code += chars[Math.floor(Math.random() * chars.length)];
   }
-  return `QC-${code}`;
+  return `VT-${code}`;
 }
