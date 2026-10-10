@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { CAB_TYPES, calculateFare } from "@/lib/fare";
 
 // POST /api/estimate
-// Body: { distanceKm: number }
+// Body: { distanceKm: number, tripType?: "ONE_WAY" | "ROUND_TRIP" }
 // Returns fare breakdown for every cab type so the UI can show a comparison.
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     const distanceKm = Number(body.distanceKm) || 0;
+    const tripType =
+      String(body.tripType ?? "ONE_WAY").trim().toUpperCase() === "ROUND_TRIP"
+        ? "ROUND_TRIP"
+        : "ONE_WAY";
 
     if (distanceKm <= 0) {
       return NextResponse.json(
@@ -22,7 +26,7 @@ export async function POST(request: NextRequest) {
       icon: cab.icon,
       seats: cab.seats,
       description: cab.description,
-      ...calculateFare(cab.id, distanceKm),
+      ...calculateFare(cab.id, distanceKm, tripType),
     }));
 
     return NextResponse.json({ estimates });

@@ -185,3 +185,19 @@ Work Log:
 Stage Summary:
 - Customers never see any prices anywhere (form, cab cards, confirmation popup, recent bookings) — fares are only in the admin dashboard and admin emails; pricing is discussed with the customer by phone after booking.
 - The Toll/Permit/Parking notice remains in the popup, now phrased to cover the on-call fare discussion.
+---
+Task ID: 9
+Agent: Z.ai Code (main)
+Task: Add the uploaded fare-chart content (Trichy Taxi Fare Chart for One Way & Round Trip — 2026) to the website.
+
+Work Log:
+- page.tsx: added a "Fare chart" section (id=fares, below Features) with the exact content from the uploaded image — heading "Trichy Taxi Fare Chart for One Way & Round Trip (Sedan / SUV) — 2026", intro paragraph ("approximate fare range … starting from Trichy …"), 4-row table (One Way Drop Taxi Trichy Sedan ₹15/KM, One Way SUV ₹20/KM, Round Trip Sedan ₹14/KM, Round Trip SUV ₹19/KM; car types Etios/Dzire/Xcent and Ertiga/Xylo/Innova) and the italic footnote "* Toll, parking, driver bata, and state permit charges are additional. Final fare may vary based on actual distance traveled." Table is responsive (overflow-x-auto + min-w) with amber header/zebra styling; added "Fare chart" desktop nav link.
+- page.tsx: added an "About Vaitheeshwara Travels" card mirroring the image's About section, describing one-way/round-trip drop taxi service from Trichy, Sedan/SUV models, call-to-schedule flow and the toll/parking/permit policy.
+- src/lib/fare.ts: pricing engine now matches the published chart — CabType gained perKmRoundTrip (sedan 14, suv 19; luxury unchanged at 28) and calculateFare(cabTypeId, distanceKm, tripType="ONE_WAY") picks the discounted rate for ROUND_TRIP.
+- api/bookings + api/estimate: pass tripType through to calculateFare so stored/admin fares match the chart.
+- bun run lint clean. API verified: round trip 150 km sedan VT-FKN5T3 perKm=14 total=₹2,175; round trip 150 km SUV VT-4AB6DT perKm=19 total=₹2,960; one-way 150 km sedan VT-UFFST2 perKm=15 total=₹2,325 — all exactly chart + small base fare.
+- Agent Browser E2E: #fares section renders with all 4 rows (text-extracted and screenshot-verified), About card renders, nav link present, mobile 390px table scrolls horizontally, footer sticks, zero console/page errors; temp screenshots cleaned.
+
+Stage Summary:
+- The site now publishes the 2026 Trichy fare chart (one-way ₹15/₹20, round trip ₹14/₹19 per KM for Sedan/SUV) plus an About section, and the booking engine charges exactly those per-km rates per trip type (base fare ₹75/₹110 still added internally; toll/parking/permit/bata remain separate as noted).
+- Customer-facing fare hiding (popup/list) from Task 8 is untouched — the chart is informational content only.

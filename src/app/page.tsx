@@ -10,6 +10,7 @@ import {
   Star,
   MapPinned,
   Timer,
+  BadgeIndianRupee,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,29 @@ const FEATURES = [
     title: "Verified drivers",
     description:
       "Background-verified drivers, live trip tracking and 24×7 support on every ride.",
+  },
+];
+
+const FARE_CHART: { service: string; car: string; fare: string }[] = [
+  {
+    service: "One Way Drop Taxi Trichy",
+    car: "Sedan (Etios / Dzire / Xcent)",
+    fare: "₹ 15 per KM",
+  },
+  {
+    service: "One Way Drop Taxi Trichy",
+    car: "SUV (Ertiga / Xylo / Innova)",
+    fare: "₹ 20 per KM",
+  },
+  {
+    service: "Round Trip Taxi",
+    car: "Sedan (Etios / Dzire / Xcent)",
+    fare: "₹ 14 per KM",
+  },
+  {
+    service: "Round Trip Taxi",
+    car: "SUV (Ertiga / Xylo / Innova)",
+    fare: "₹ 19 per KM",
   },
 ];
 
@@ -113,6 +137,12 @@ export default function Home() {
                   className="hidden rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted sm:block"
                 >
                   My bookings
+                </a>
+                <a
+                  href="#fares"
+                  className="hidden rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted sm:block"
+                >
+                  Fare chart
                 </a>
                 <a
                   href="#book"
@@ -213,6 +243,91 @@ export default function Home() {
                   </motion.div>
                 ))}
               </div>
+            </section>
+
+            {/* ---------- Fare chart ---------- */}
+            <section id="fares" className="mx-auto w-full max-w-6xl px-4 pb-14 sm:px-6">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4 }}
+                className="mx-auto max-w-3xl"
+              >
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100 px-3.5 py-1 text-xs font-semibold text-amber-900">
+                  <BadgeIndianRupee className="size-3.5" />
+                  2026 fare chart
+                </span>
+                <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-balance sm:text-3xl">
+                  Trichy Taxi Fare Chart for One Way &amp; Round Trip (Sedan / SUV) — 2026
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+                  Below is an approximate fare range for one-way drop taxi and round-trip
+                  taxi services starting from Trichy. Pricing may vary slightly based on
+                  distance and route conditions.
+                </p>
+
+                <div className="mt-5 overflow-x-auto rounded-xl border bg-card shadow-sm">
+                  <table className="w-full min-w-[520px] text-left text-sm">
+                    <thead>
+                      <tr className="bg-amber-50 text-xs tracking-wide text-amber-900 uppercase">
+                        <th scope="col" className="px-4 py-3 font-semibold">
+                          Service Type
+                        </th>
+                        <th scope="col" className="px-4 py-3 font-semibold">
+                          Car Type
+                        </th>
+                        <th scope="col" className="px-4 py-3 font-semibold">
+                          One-Way Drop Taxi Fare
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {FARE_CHART.map((row, i) => (
+                        <tr
+                          key={`${row.service}-${row.car}`}
+                          className={`border-t transition-colors hover:bg-muted/50 ${
+                            i % 2 === 1 ? "bg-amber-50/40" : ""
+                          }`}
+                        >
+                          <td className="px-4 py-3 font-medium">{row.service}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{row.car}</td>
+                          <td className="px-4 py-3 font-bold whitespace-nowrap">{row.fare}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <p className="mt-3 text-xs text-muted-foreground italic sm:text-sm">
+                  * Toll, parking, driver bata, and state permit charges are additional.
+                  Final fare may vary based on actual distance traveled.
+                </p>
+              </motion.div>
+            </section>
+
+            {/* ---------- About ---------- */}
+            <section className="mx-auto w-full max-w-6xl px-4 pb-14 sm:px-6">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4 }}
+                className="mx-auto max-w-3xl rounded-xl border bg-card p-6 shadow-sm"
+              >
+                <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+                  About Vaitheeshwara Travels
+                </h2>
+                <p className="mt-3 text-sm text-muted-foreground sm:text-base">
+                  Vaitheeshwara Travels provides one-way drop taxi and round-trip taxi
+                  services starting from Trichy at honest, transparent rates. Pick a
+                  comfortable Sedan (Etios / Dzire / Xcent) or a spacious SUV (Ertiga /
+                  Xylo / Innova), share your pickup and drop details, and our team will
+                  call you to plan the departure — no time slots, no haggling. Toll,
+                  parking, driver bata and state permit charges are billed separately, so
+                  the price we agree on is the price you pay.
+                </p>
+              </motion.div>
             </section>
           </>
         )}

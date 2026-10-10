@@ -10,7 +10,8 @@ export interface CabType {
   description: string;
   seats: number;
   baseFare: number; // fixed opening fare
-  perKm: number; // cost per km
+  perKm: number; // cost per km for one-way trips
+  perKmRoundTrip?: number; // discounted per-km rate for round trips (falls back to perKm)
   icon: string; // emoji used in the UI
 }
 
@@ -22,6 +23,7 @@ export const CAB_TYPES: CabType[] = [
     seats: 4,
     baseFare: 75,
     perKm: 15,
+    perKmRoundTrip: 14,
     icon: "🚙",
   },
   {
@@ -31,6 +33,7 @@ export const CAB_TYPES: CabType[] = [
     seats: 6,
     baseFare: 110,
     perKm: 20,
+    perKmRoundTrip: 19,
     icon: "🚐",
   },
   {
@@ -63,17 +66,22 @@ export interface FareBreakdown {
 
 export function calculateFare(
   cabTypeId: string,
-  distanceKm: number
+  distanceKm: number,
+  tripType: "ONE_WAY" | "ROUND_TRIP" = "ONE_WAY"
 ): FareBreakdown {
   const cab = getCabType(cabTypeId) ?? CAB_TYPES[0];
   const safeDistance = Math.max(1, Math.min(MAX_TRIP_KM, distanceKm || 0));
 
-  const distanceFare = round2(safeDistance * cab.perKm);
+  // Round trips get the discounted per-km rate published in the fare chart
+  const perKmRate =
+    tripType === "ROUND_TRIP" ? (cab.perKmRoundTrip ?? cab.perKm) : cab.perKm;
+
+  const distanceFare = round2(safeDistance * perKmRate);
   const totalFare = round2(cab.baseFare + distanceFare);
 
   return {
     baseFare: cab.baseFare,
-    perKmRate: cab.perKm,
+    perKmRate,
     distanceFare,
     totalFare,
   };

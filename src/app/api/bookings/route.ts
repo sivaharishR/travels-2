@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errors.join(", ") }, { status: 400 });
     }
 
-    const fare = calculateFare(cabType, distanceKm);
+    const fare = calculateFare(cabType, distanceKm, tripType);
 
     const booking = await db.booking.create({
       data: {
