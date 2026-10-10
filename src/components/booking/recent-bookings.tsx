@@ -15,7 +15,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { CAB_TYPES } from "@/lib/fare";
-import { formatINR } from "@/lib/format";
 import { StatusBadge } from "@/components/booking/status-badge";
 import type { Booking } from "@/types/booking";
 
@@ -156,10 +155,7 @@ export function RecentBookings({ version }: { version: number }) {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-center">
-                    <span className="text-lg font-bold">
-                      {formatINR(b.totalFare)}
-                    </span>
+                  <div className="flex items-center justify-end gap-3 sm:flex-col sm:items-end sm:justify-center">
                     {b.status === "CONFIRMED" && (
                       <Button
                         variant="ghost"

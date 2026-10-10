@@ -170,3 +170,18 @@ Stage Summary:
 - Confirmation popup informs customers that Toll, Permit & Parking charges are separate from the quoted fare.
 - Minimum distance is 150 km for one-way AND round trips (no customer-facing maximum).
 - Site fully rebranded to Vaitheeshwara Travels (UI, metadata, emails, VT- booking refs, admin credentials admin / vaithees123).
+---
+Task ID: 8
+Agent: Z.ai Code (main)
+Task: Hide rates from the customer-facing booking confirmation popup (and recent bookings list) — fares will be discussed on voice call instead.
+
+Work Log:
+- booking-form.tsx: removed the "Total fare" row + Separator from the confirmation dialog; the amber note was reworded to "Toll, Permit & Parking charges are separate. We'll discuss the fare on call." (keeps the previously requested Toll/Permit/Parking info while explaining why no fare is shown); dropped the now-unused formatINR import.
+- recent-bookings.tsx: removed the ₹ total fare from each list item (right column now only holds the Cancel button, aligned right); dropped the now-unused formatINR import.
+- Admin dashboard (admin-dashboard.tsx) intentionally still shows fares/revenue — admin-only view; emails to admins still include the full fare breakdown; server-side fare computation and DB storage unchanged.
+- bun run lint clean; no dev server restart needed (pure client-component change).
+- Agent Browser E2E: UI booking VT-PWQAUK (Chennai Central → Vellore, 150 km sedan) → popup shows Passenger/Trip type/Pickup/Drop + the new note, ZERO ₹ symbols in the dialog (grep-verified); recent bookings list contains no ₹ amounts; admin dashboard still displays ₹ fares/revenue; zero console/page errors; temp screenshots cleaned up.
+
+Stage Summary:
+- Customers never see any prices anywhere (form, cab cards, confirmation popup, recent bookings) — fares are only in the admin dashboard and admin emails; pricing is discussed with the customer by phone after booking.
+- The Toll/Permit/Parking notice remains in the popup, now phrased to cover the on-call fare discussion.

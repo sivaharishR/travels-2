@@ -47,7 +47,6 @@ import {
   MIN_TRIP_KM,
   MAX_TRIP_KM,
 } from "@/lib/fare";
-import { formatINR } from "@/lib/format";
 import type { Booking } from "@/types/booking";
 
 type TripType = "ONE_WAY" | "ROUND_TRIP";
@@ -507,16 +506,10 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                       {confirmedBooking.dropLocation}
                     </span>
                   </div>
-                  <Separator />
-                  <div className="flex justify-between gap-4 text-base">
-                    <span className="font-semibold">Total fare</span>
-                    <span className="font-bold">
-                      {formatINR(confirmedBooking.totalFare)}
-                    </span>
-                  </div>
                   <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
                     <Info className="mt-0.5 size-3.5 shrink-0" />
-                    Toll, Permit &amp; Parking charges are separate from this fare.
+                    Toll, Permit &amp; Parking charges are separate. We&apos;ll discuss the fare on
+                    call.
                   </p>
                 </div>
                 <Button
