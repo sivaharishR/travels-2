@@ -57,12 +57,12 @@ const FARE_CHART: { service: string; car: string; fare: string }[] = [
   {
     service: "One Way Drop Taxi Trichy",
     car: "Sedan (Etios / Dzire / Xcent)",
-    fare: "₹ 15 per KM",
+    fare: "₹ 14 per KM",
   },
   {
     service: "One Way Drop Taxi Trichy",
     car: "SUV (Ertiga / Xylo / Innova)",
-    fare: "₹ 20 per KM",
+    fare: "₹ 19 per KM",
   },
   {
     service: "Round Trip Taxi",

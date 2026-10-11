@@ -219,3 +219,18 @@ Stage Summary:
 - Admin access is now exclusively bala / 2602Bala@ (set in both code fallback and .env), never displayed in the UI.
 - Database is completely clean: 0 bookings, 0 activities, 0 email logs — a fresh start; new bookings/logs will accumulate from here (failed admin logins are still audited on purpose).
 - Email notification fallback (email.config.json) restored after tooling wiped it.
+---
+Task ID: 11
+Agent: Z.ai Code (main)
+Task: Update fare rates — one-way is now ₹14/km (sedan) and ₹19/km (SUV), same as round trip.
+
+Work Log:
+- src/lib/fare.ts: sedan perKm 15 → 14, SUV perKm 20 → 19; removed the perKmRoundTrip overrides (rates unified) — the optional perKmRoundTrip fallback in calculateFare remains for future flexibility; updated stale comment.
+- src/app/page.tsx: fare chart table rows updated — One Way Drop Taxi Trichy Sedan ₹15 → ₹14 per KM, SUV ₹20 → ₹19 per KM (round trip rows already ₹14/₹19, unchanged).
+- bun run lint clean; grep confirms no stale ₹15/₹20-per-KM or old perKm values anywhere.
+- API verified: one-way 150 km sedan VT-CDXVCA perKm=14 total=₹2,175; round trip 150 km sedan VT-H27N9Q perKm=14 total=₹2,175 (identical); one-way 150 km SUV VT-GE33F8 perKm=19 total=₹2,960; min-150 km rejection still works (149 → 400).
+- Cleaned the 3 verification test bookings + related activity/email logs afterwards (data stays fresh per Task 10 request).
+- Browser verified: #fares table shows ₹14 | ₹19 | ₹14 | ₹19 per KM (screenshot-verified), zero console errors.
+
+Stage Summary:
+- One-way and round trips now share the same published rates: Sedan ₹14/km, SUV ₹19/km (plus internal base fare ₹75/₹110; toll/parking/bata/permit separate). Chart and booking engine are in sync; min 150 km unchanged.

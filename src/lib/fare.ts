@@ -22,8 +22,7 @@ export const CAB_TYPES: CabType[] = [
     description: "Comfortable AC sedans for everyday travel",
     seats: 4,
     baseFare: 75,
-    perKm: 15,
-    perKmRoundTrip: 14,
+    perKm: 14,
     icon: "🚙",
   },
   {
@@ -32,8 +31,7 @@ export const CAB_TYPES: CabType[] = [
     description: "Extra space for families and luggage",
     seats: 6,
     baseFare: 110,
-    perKm: 20,
-    perKmRoundTrip: 19,
+    perKm: 19,
     icon: "🚐",
   },
   {
@@ -72,7 +70,8 @@ export function calculateFare(
   const cab = getCabType(cabTypeId) ?? CAB_TYPES[0];
   const safeDistance = Math.max(1, Math.min(MAX_TRIP_KM, distanceKm || 0));
 
-  // Round trips get the discounted per-km rate published in the fare chart
+  // Round trips may use a discounted per-km rate when defined; currently
+  // both trip types share the same published chart rate (perKm).
   const perKmRate =
     tripType === "ROUND_TRIP" ? (cab.perKmRoundTrip ?? cab.perKm) : cab.perKm;
 
