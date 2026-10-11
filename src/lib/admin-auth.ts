@@ -4,8 +4,8 @@ import { randomUUID } from "crypto";
 // Simple token-based sessions kept in memory (single-server demo app).
 // Credentials can be overridden via ADMIN_USERNAME / ADMIN_PASSWORD env vars.
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "admin";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "vaithees123";
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "bala";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "2602Bala@";
 
 const TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 

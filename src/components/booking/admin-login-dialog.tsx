@@ -118,8 +118,7 @@ export function AdminLoginDialog({
             )}
           </Button>
           <p className="text-center text-xs text-muted-foreground">
-            Demo credentials: <span className="font-mono font-semibold">admin</span>{" "}
-            / <span className="font-mono font-semibold">vaithees123</span>
+            Authorized access only.
           </p>
         </form>
       </DialogContent>

@@ -201,3 +201,21 @@ Work Log:
 Stage Summary:
 - The site now publishes the 2026 Trichy fare chart (one-way ₹15/₹20, round trip ₹14/₹19 per KM for Sedan/SUV) plus an About section, and the booking engine charges exactly those per-km rates per trip type (base fare ₹75/₹110 still added internally; toll/parking/permit/bata remain separate as noted).
 - Customer-facing fare hiding (popup/list) from Task 8 is untouched — the chart is informational content only.
+---
+Task ID: 10
+Agent: Z.ai Code (main)
+Task: Change admin credentials to bala / 2602Bala@, stop showing credentials in the UI, and wipe all previously tested data.
+
+Work Log:
+- src/lib/admin-auth.ts: default credentials changed to bala / 2602Bala@ (env ADMIN_USERNAME/ADMIN_PASSWORD still override).
+- .env: added ADMIN_USERNAME=bala + ADMIN_PASSWORD=2602Bala@. INCIDENT: .env had been wiped back to DATABASE_URL-only again by tooling (same as Task 5 incident) and email.config.json had been deleted; restored .env (chmod 600) with admin creds + ADMIN_EMAILS (both admin addresses) + Gmail SMTP settings, and recreated the git-ignored email.config.json fallback so email delivery survives future wipes.
+- admin-login-dialog.tsx: removed the "Demo credentials" hint entirely — dialog now just says "Authorized access only."; no credentials appear anywhere in the UI (grep-verified).
+- Data wipe via temporary Prisma script (created inside project root so @prisma/client resolves, deleted right after): removed 27 bookings, 65 activity logs, 23 email logs; second pass cleared 2 ADMIN_LOGIN_FAILED entries created during verification. All tables now empty.
+- Restarted dev server (setsid) to load the new .env; bun run lint clean.
+- Verified via API: admin/vaithees123 → 401, admin/quickcab123 → 401 (then 1s throttle 429 by design); bala/2602Bala@ → 200 with token; dashboard stats all zero (total 0, revenue 0) with 0 bookings / 0 emailLogs; public /api/bookings returns [].
+- Verified in browser: Recent bookings shows "No bookings yet"; login dialog shows no credentials; bala login via UI succeeds → Admin mode dashboard with zeroed stats; no leaked strings (vaithees123/quickcab123) anywhere; zero console errors.
+
+Stage Summary:
+- Admin access is now exclusively bala / 2602Bala@ (set in both code fallback and .env), never displayed in the UI.
+- Database is completely clean: 0 bookings, 0 activities, 0 email logs — a fresh start; new bookings/logs will accumulate from here (failed admin logins are still audited on purpose).
+- Email notification fallback (email.config.json) restored after tooling wiped it.
