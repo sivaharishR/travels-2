@@ -14,18 +14,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vaitheeshwara Travels — Book Your Ride Instantly",
+  title: "Vaitheeshwara One Way Drop Taxi — Book Your Ride Instantly",
   description:
-    "Book a cab with Vaitheeshwara Travels. Enter your details, pickup and drop location, pick one way or round trip and confirm in under a minute.",
-  keywords: ["cab booking", "taxi", "ride booking", "Vaitheeshwara Travels", "outstation cabs", "airport transfer"],
-  authors: [{ name: "Vaitheeshwara Travels" }],
+    "Book a cab with Vaitheeshwara One Way Drop Taxi. Enter your details, pickup and drop location, pick one way or round trip and confirm in under a minute.",
+  keywords: ["cab booking", "taxi", "one way drop taxi Trichy", "Vaitheeshwara One Way Drop Taxi", "outstation cabs", "airport transfer"],
+  authors: [{ name: "Vaitheeshwara One Way Drop Taxi" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "Vaitheeshwara Travels — Book Your Ride Instantly",
+    title: "Vaitheeshwara One Way Drop Taxi — Book Your Ride Instantly",
     description: "Enter pickup & drop, choose one way or round trip and confirm your ride.",
-    siteName: "Vaitheeshwara Travels",
+    siteName: "Vaitheeshwara One Way Drop Taxi",
     type: "website",
   },
 };

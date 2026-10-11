@@ -399,7 +399,7 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
                       type="button"
                       onClick={() => setCabType(cab.id)}
                       aria-pressed={active}
-                      className={`relative flex items-center gap-3 rounded-xl border p-4 text-left transition-all min-h-[76px] ${
+                      className={`relative flex min-w-0 items-center gap-3 rounded-xl border p-4 text-left transition-all min-h-[76px] ${
                         active
                           ? "border-amber-500 bg-amber-50 ring-2 ring-amber-500/40 dark:bg-amber-950/30"
                           : "hover:border-amber-300 hover:bg-muted/60"

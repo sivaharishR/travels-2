@@ -139,7 +139,7 @@ function buildEmailHtml(b: BookingLike): string {
 <body style="margin:0;padding:0;background-color:#fafaf9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:24px 16px;">
     <div style="background:#fbbf24;border-radius:16px 16px 0 0;padding:20px 24px;">
-      <span style="font-size:20px;font-weight:800;color:#171717;">🚕 Vaitheeshwara Travels — New Booking</span>
+      <span style="font-size:20px;font-weight:800;color:#171717;">🚕 Vaitheeshwara One Way Drop Taxi — New Booking</span>
     </div>
     <div style="background:#ffffff;border:1px solid #e5e5e5;border-top:none;border-radius:0 0 16px 16px;padding:24px;">
       <p style="margin:0 0 16px;font-size:14px;color:#525252;">
@@ -165,7 +165,7 @@ function buildEmailHtml(b: BookingLike): string {
       </table>
 
       <p style="margin:16px 0 0;font-size:12px;color:#a3a3a3;text-align:center;">
-        Sent automatically by Vaitheeshwara Travels · ${formatDateTime(new Date())}
+        Sent automatically by Vaitheeshwara One Way Drop Taxi · Support: 9342245360, 9600859515 · ${formatDateTime(new Date())}
       </p>
     </div>
   </div>
@@ -176,7 +176,7 @@ function buildEmailHtml(b: BookingLike): string {
 function buildEmailText(b: BookingLike): string {
   const cab = CAB_TYPES.find((c) => c.id === b.cabType);
   return [
-    `New Vaitheeshwara Travels booking ${b.bookingRef}`,
+    `New Vaitheeshwara One Way Drop Taxi booking ${b.bookingRef}`,
     `Passenger: ${b.passengerName} (${b.phone})`,
     `Trip type: ${b.tripType === "ROUND_TRIP" ? "Round trip" : "One way"}`,
     `Route: ${b.pickupLocation} → ${b.dropLocation}`,
@@ -208,7 +208,7 @@ export async function notifyAdminNewBooking(booking: BookingLike): Promise<void>
         "SMTP not configured — set SMTP_USER and SMTP_PASS in .env to enable real email delivery";
     } else {
       await transporter.sendMail({
-        from: `"Vaitheeshwara Travels Bookings" <${EMAIL_FROM}>`,
+        from: `"Vaitheeshwara One Way Drop Taxi" <${EMAIL_FROM}>`,
         to: EMAIL_TO,
         subject,
         text,

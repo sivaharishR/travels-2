@@ -11,6 +11,7 @@ import {
   MapPinned,
   Timer,
   BadgeIndianRupee,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -100,11 +101,17 @@ export default function Home() {
               <CarTaxiFront className="size-6 text-black" />
             </span>
             <span className="flex flex-col leading-tight">
-              <span className="text-sm font-extrabold tracking-tight sm:text-lg">
-                Vaitheeshwara Travels
+              <span className="hidden text-lg font-extrabold tracking-tight whitespace-nowrap lg:block">
+                Vaitheeshwara One Way Drop Taxi
+              </span>
+              <span className="text-sm font-extrabold tracking-tight lg:hidden">
+                Vaitheeshwara
+              </span>
+              <span className="text-[10px] font-bold tracking-tight text-amber-700 lg:hidden">
+                One Way Drop Taxi
               </span>
               <span className="hidden text-xs text-muted-foreground sm:block">
-                Travels &amp; outstation cabs
+                Outstation cabs — Trichy
               </span>
             </span>
           </a>
@@ -127,26 +134,29 @@ export default function Home() {
             ) : (
               <>
                 <a
-                  href="#book"
-                  className="hidden rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted sm:block"
-                >
-                  Book a ride
-                </a>
-                <a
                   href="#bookings"
-                  className="hidden rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted sm:block"
+                  className="hidden rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted md:block"
                 >
                   My bookings
                 </a>
                 <a
                   href="#fares"
-                  className="hidden rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted sm:block"
+                  className="hidden rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted md:block"
                 >
                   Fare chart
                 </a>
                 <a
+                  href="tel:+919342245360"
+                  aria-label="Call 9342245360"
+                  title="Call 9342245360"
+                  className="flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-2 text-sm font-bold text-amber-900 transition-colors hover:bg-amber-100 sm:px-3"
+                >
+                  <Phone className="size-4" />
+                  <span className="hidden lg:inline">9342245360</span>
+                </a>
+                <a
                   href="#book"
-                  className="rounded-full bg-amber-400 px-4 py-2 text-sm font-bold text-black transition-colors hover:bg-amber-500"
+                  className="rounded-full bg-amber-400 px-3 py-2 text-sm font-bold text-black transition-colors hover:bg-amber-500 sm:px-4"
                 >
                   Book now
                 </a>
@@ -158,7 +168,7 @@ export default function Home() {
                   aria-label="Admin sign in"
                 >
                   <ShieldCheck className="size-4" />
-                  Admin
+                  <span className="hidden sm:inline">Admin</span>
                 </Button>
               </>
             )}
@@ -316,10 +326,10 @@ export default function Home() {
                 className="mx-auto max-w-3xl rounded-xl border bg-card p-6 shadow-sm"
               >
                 <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  About Vaitheeshwara Travels
+                  About Vaitheeshwara One Way Drop Taxi
                 </h2>
                 <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-                  Vaitheeshwara Travels provides one-way drop taxi and round-trip taxi
+                  Vaitheeshwara One Way Drop Taxi provides one-way drop taxi and round-trip taxi
                   services starting from Trichy at honest, transparent rates. Pick a
                   comfortable Sedan (Etios / Dzire / Xcent) or a spacious SUV (Ertiga /
                   Xylo / Innova), share your pickup and drop details, and our team will
@@ -335,17 +345,39 @@ export default function Home() {
 
       {/* ---------- Footer (sticks to bottom) ---------- */}
       <footer className="mt-auto border-t bg-white">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-2 px-4 py-5 text-sm text-muted-foreground sm:flex-row sm:px-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-3 px-4 py-5 text-sm text-muted-foreground sm:flex-row sm:px-6">
           <p
             className="flex items-center gap-1.5"
             suppressHydrationWarning
           >
             <CarTaxiFront className="size-4 text-amber-600" />
-            © {new Date().getFullYear()} Vaitheeshwara Travels — safe, comfortable journeys.
+            © {new Date().getFullYear()} Vaitheeshwara One Way Drop Taxi — safe, comfortable journeys.
           </p>
-          <p>
-            Support: <span className="font-medium text-foreground">vaitheeswaratravels@gmail.com</span>
-          </p>
+          <div
+            aria-label="Support contact details"
+            className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5"
+          >
+            <a
+              href="tel:+919342245360"
+              className="flex items-center gap-1 font-medium text-foreground transition-colors hover:text-amber-700"
+            >
+              <Phone className="size-3.5 text-amber-600" />
+              9342245360
+            </a>
+            <a
+              href="tel:+919600859515"
+              className="flex items-center gap-1 font-medium text-foreground transition-colors hover:text-amber-700"
+            >
+              <Phone className="size-3.5 text-amber-600" />
+              9600859515
+            </a>
+            <a
+              href="mailto:vaitheeswaratravels@gmail.com"
+              className="flex items-center gap-1 transition-colors hover:text-amber-700"
+            >
+              <span className="font-medium text-foreground">vaitheeswaratravels@gmail.com</span>
+            </a>
+          </div>
         </div>
       </footer>
 

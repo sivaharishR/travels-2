@@ -234,3 +234,21 @@ Work Log:
 
 Stage Summary:
 - One-way and round trips now share the same published rates: Sedan ₹14/km, SUV ₹19/km (plus internal base fare ₹75/₹110; toll/parking/bata/permit separate). Chart and booking engine are in sync; min 150 km unchanged.
+---
+Task ID: 12
+Agent: Z.ai Code (main)
+Task: Add support phone numbers (9342245360, 9600859515) and rename brand "Vaitheeshwara Travels" → "Vaitheeshwara One Way Drop Taxi".
+
+Work Log:
+- src/app/page.tsx: header brand lockup reworked — full name "Vaitheeshwara One Way Drop Taxi" (whitespace-nowrap) at lg+, compact two-line "Vaitheeshwara" / "One Way Drop Taxi" below lg; tagline now "Outstation cabs — Trichy". Added amber click-to-call pill in nav (tel:+919342245360, number visible lg+, icon-only below); Admin button is icon-only on mobile; removed redundant "Book a ride" link (duplicated "Book now" → frees 94px so the longer brand fits); "My bookings"/"Fare chart" links now md: instead of sm:. About heading + body renamed; footer copyright renamed; footer support block rebuilt with tel: links for both numbers (amber Phone icons) + mailto email, flex-wrap centered.
+- src/app/layout.tsx: metadata title/description/keywords/authors/openGraph title+siteName all renamed to "Vaitheeshwara One Way Drop Taxi"; keyword "one way drop taxi Trichy" added.
+- src/lib/mailer.ts: email header, footer line (now also lists Support: 9342245360, 9600859515), text template and From name renamed to the new brand.
+- Layout-bug fix found during verification: src/components/booking/booking-form.tsx cab-type button lacked min-w-0 → at 390px the card's min-content (342px) overflowed its 308px grid column, pushing the selected-check badge 0.5px past the viewport (1px horizontal doc scroll). Added min-w-0; verified no doc-level overflow at 1280/1024/768/390/360.
+- Verified: rendered HTML has 18× new brand, 0× "Vaitheeshwara Travels" leftovers; tel:+919342245360 (header+footer) and tel:+919600859515 (footer) present; <title> updated. Estimate API: one-way == round-trip (sedan 150 km ₹2,175 / SUV ₹2,960) — Task 11 rates intact.
+- Browser E2E: desktop 1280 header one-line brand + phone number in nav; mobile 390 two-line brand + icon call button; fare chart cells "₹ 14 per KM"/"₹ 19 per KM" ×4; footer shows both numbers + email centered. Golden path: submitted real booking VT-Y6KNAD → "Ride confirmed!" dialog with NO rates + toll/on-call note; admin email SENT to both recipients; server fare perKm=14 total ₹2,175. Zero console errors; lint clean.
+- Cleanup: deleted test booking VT-Y6KNAD + its activity/email logs (bookings back to 0); removed temp script + screenshots.
+
+Stage Summary:
+- Brand is now "Vaitheeshwara One Way Drop Taxi" across UI, metadata, and admin emails (email address vaitheeswaratravels@gmail.com intentionally unchanged — it's the real inbox).
+- Support channels: header call pill (9342245360), footer tel: links for 9342245360 & 9600859515 + email; tel: hrefs use +91 prefix.
+- Fixed a pre-existing mobile overflow (cab card min-w-0) — document no longer scrolls horizontally at 360–1280px.
