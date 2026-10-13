@@ -106,11 +106,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Notify the admin by email (Gmail SMTP). Fire-and-forget with full
-    // error handling inside — booking response never waits on email.
-    void notifyAdminNewBooking(booking).catch((err) =>
-      console.error("Admin email notification error:", err)
-    );
+    // Notify the admin by email (Gmail SMTP). Await ensures serverless runtimes
+    // (like Vercel) do not freeze or terminate the function before the email is sent.
+    // notifyAdminNewBooking catches all errors internally, so this will never throw.
+    try {
+      await notifyAdminNewBooking(booking);
+    } catch (err) {
+      console.error("Admin email notification error:", err);
+    }
 
     return NextResponse.json({ booking }, { status: 201 });
   } catch (err: unknown) {

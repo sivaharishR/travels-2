@@ -90,16 +90,27 @@ let cachedTransporter: Transporter | null = null;
 function getTransporter(): Transporter | null {
   if (!isEmailConfigured()) return null;
   if (!cachedTransporter) {
-    cachedTransporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_PORT === 465,
-      auth: { user: EMAIL_FROM, pass: EMAIL_PASS },
-      // Never let a slow SMTP server hang the API for long
-      connectionTimeout: 8000,
-      greetingTimeout: 8000,
-      socketTimeout: 10000,
-    });
+    const isGmail =
+      SMTP_HOST.toLowerCase().includes("gmail") ||
+      EMAIL_FROM.toLowerCase().endsWith("@gmail.com");
+
+    cachedTransporter = isGmail
+      ? nodemailer.createTransport({
+          service: "gmail",
+          auth: { user: EMAIL_FROM, pass: EMAIL_PASS },
+          connectionTimeout: 10000,
+          greetingTimeout: 10000,
+          socketTimeout: 15000,
+        })
+      : nodemailer.createTransport({
+          host: SMTP_HOST,
+          port: SMTP_PORT,
+          secure: SMTP_PORT === 465,
+          auth: { user: EMAIL_FROM, pass: EMAIL_PASS },
+          connectionTimeout: 10000,
+          greetingTimeout: 10000,
+          socketTimeout: 15000,
+        });
   }
   return cachedTransporter;
 }
