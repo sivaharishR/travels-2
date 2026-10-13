@@ -113,10 +113,11 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json({ booking }, { status: 201 });
-  } catch (err) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error("Create booking error:", err);
     return NextResponse.json(
-      { error: "Failed to create booking" },
+      { error: "Failed to create booking", details: message },
       { status: 500 }
     );
   }

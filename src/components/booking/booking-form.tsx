@@ -143,7 +143,7 @@ export function BookingSection({ onBooked }: { onBooked?: () => void }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Could not confirm your booking");
+        throw new Error(data.details || data.error || "Could not confirm your booking");
       }
       setConfirmedBooking(data.booking as Booking);
       onBooked?.();
