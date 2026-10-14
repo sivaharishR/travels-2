@@ -136,6 +136,23 @@ export function RecentBookings({ version }: { version: number }) {
                         {b.passengers === 1 ? "passenger" : "passengers"}
                       </span>
                     </div>
+
+                    {/* Schedule info */}
+                    {(b.pickupDate || b.returnDate) && (
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-amber-900 bg-amber-50/70 border border-amber-200/60 rounded-md px-2.5 py-1">
+                        {b.pickupDate && (
+                          <span className="font-medium">
+                            🗓️ Pickup: {b.pickupDate}{b.pickupTime ? ` at ${b.pickupTime}` : ""}
+                          </span>
+                        )}
+                        {b.returnDate && (
+                          <span className="font-medium text-amber-800">
+                            🔄 Return: {b.returnDate}{b.returnTime ? ` at ${b.returnTime}` : ""}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <div className="grid gap-1 text-sm sm:grid-cols-2">
                       <span className="flex min-w-0 items-center gap-1.5">
                         <MapPin className="size-3.5 shrink-0 text-emerald-600" />
@@ -143,7 +160,9 @@ export function RecentBookings({ version }: { version: number }) {
                       </span>
                       <span className="flex min-w-0 items-center gap-1.5">
                         <Navigation className="size-3.5 shrink-0 text-rose-600" />
-                        <span className="truncate">{b.dropLocation}</span>
+                        <span className="truncate font-medium text-rose-950" title={b.dropLocation}>
+                          {b.dropLocation}
+                        </span>
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">

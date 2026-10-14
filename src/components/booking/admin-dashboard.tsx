@@ -260,6 +260,7 @@ export function AdminDashboard({ token, onLogout }: AdminDashboardProps) {
                         <TableHead>Ref</TableHead>
                         <TableHead>Passenger</TableHead>
                         <TableHead>Route</TableHead>
+                        <TableHead>Schedule</TableHead>
                         <TableHead>Cab</TableHead>
                         <TableHead className="text-right">Distance</TableHead>
                         <TableHead className="text-right">Fare</TableHead>
@@ -270,6 +271,7 @@ export function AdminDashboard({ token, onLogout }: AdminDashboardProps) {
                     <TableBody>
                       {data.bookings.map((b) => {
                         const cab = CAB_TYPES.find((c) => c.id === b.cabType);
+                        const isMultiDrop = b.dropLocation.includes("→") || (b.dropLocations && b.dropLocations.length > 2);
                         return (
                           <TableRow
                             key={b.id}
@@ -293,8 +295,29 @@ export function AdminDashboard({ token, onLogout }: AdminDashboardProps) {
                               </div>
                               <div className="flex items-center gap-1.5 whitespace-nowrap">
                                 <span className="size-1.5 shrink-0 rounded-full bg-rose-500" />
-                                <span className="truncate">{b.dropLocation}</span>
+                                <span className="truncate" title={b.dropLocation}>{b.dropLocation}</span>
+                                {isMultiDrop && (
+                                  <span className="rounded bg-amber-100 px-1 py-0.2 text-[9px] font-bold text-amber-800">
+                                    Multi-stop
+                                  </span>
+                                )}
                               </div>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {b.pickupDate ? (
+                                <div>
+                                  <div className="text-xs font-medium text-amber-900">
+                                    🗓️ {b.pickupDate}{b.pickupTime ? ` ${b.pickupTime}` : ""}
+                                  </div>
+                                  {b.returnDate && (
+                                    <div className="text-[11px] text-muted-foreground">
+                                      🔄 {b.returnDate}{b.returnTime ? ` ${b.returnTime}` : ""}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Flexible</span>
+                              )}
                             </TableCell>
                             <TableCell className="whitespace-nowrap">
                               {cab?.icon} {cab?.name ?? b.cabType}

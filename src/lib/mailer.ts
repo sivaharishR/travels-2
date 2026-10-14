@@ -14,6 +14,11 @@ export interface BookingLike {
   email?: string | null;
   pickupLocation: string;
   dropLocation: string;
+  dropLocations?: string | null;
+  pickupDate?: string | null;
+  pickupTime?: string | null;
+  returnDate?: string | null;
+  returnTime?: string | null;
   tripType?: string | null;
   cabType: string;
   passengers: number;
@@ -22,6 +27,22 @@ export interface BookingLike {
   perKmRate: number;
   distanceFare: number;
   totalFare: number;
+}
+
+// Helper to extract drop locations array
+function getDropList(b: BookingLike): string[] {
+  if (b.dropLocations) {
+    try {
+      const parsed = JSON.parse(b.dropLocations);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((s) => String(s).trim()).filter(Boolean);
+      }
+    } catch {
+      const parts = b.dropLocations.split(",").map((s) => s.trim()).filter(Boolean);
+      if (parts.length > 0) return parts;
+    }
+  }
+  return b.dropLocation ? [b.dropLocation] : [];
 }
 
 // Server-only mailer: notifies the admin by email whenever a new cab
@@ -139,11 +160,25 @@ function formatDateTime(d: Date | string | null): string {
 function buildEmailHtml(b: BookingLike): string {
   const cab = CAB_TYPES.find((c) => c.id === b.cabType);
   const isRoundTrip = b.tripType === "ROUND_TRIP";
+  const drops = getDropList(b);
+  const pickupDateTimeStr = [b.pickupDate, b.pickupTime].filter(Boolean).join(" at ");
+  const returnDateTimeStr = isRoundTrip && [b.returnDate, b.returnTime].filter(Boolean).join(" at ");
+
   const row = (label: string, value: string) =>
     `<tr>
-      <td style="padding:8px 12px;color:#737373;font-size:13px;white-space:nowrap;">${label}</td>
+      <td style="padding:8px 12px;color:#737373;font-size:13px;white-space:nowrap;vertical-align:top;">${label}</td>
       <td style="padding:8px 12px;color:#171717;font-size:14px;font-weight:600;text-align:right;">${value}</td>
     </tr>`;
+
+  const dropHtml =
+    drops.length > 1
+      ? drops
+          .map(
+            (loc, i) =>
+              `<div style="margin-bottom:4px;"><span style="color:#f59e0b;font-weight:700;">Drop ${i + 1}:</span> ${loc}</div>`
+          )
+          .join("")
+      : b.dropLocation;
 
   return `<!DOCTYPE html>
 <html>
@@ -167,8 +202,10 @@ function buildEmailHtml(b: BookingLike): string {
         ${row("Phone", b.phone)}
         ${b.email ? row("Email", b.email) : ""}
         ${row("Trip type", isRoundTrip ? "Round trip ↔" : "One way")}
+        ${pickupDateTimeStr ? row("Pickup Date & Time", pickupDateTimeStr) : ""}
+        ${returnDateTimeStr ? row("Return Date & Time", returnDateTimeStr) : ""}
         ${row("Pickup", b.pickupLocation)}
-        ${row("Drop", b.dropLocation)}
+        ${row(drops.length > 1 ? "Drop Locations" : "Drop", dropHtml)}
         ${row("Cab", `${cab?.name ?? b.cabType} (${b.passengers} pax)`)}
         ${row("Distance", `${b.distanceKm} km${isRoundTrip ? " (total)" : ""}`)}
         ${row("Fare breakdown", `Base ${formatINR(b.baseFare)} + Distance ${formatINR(b.distanceFare)}`)}
@@ -186,15 +223,27 @@ function buildEmailHtml(b: BookingLike): string {
 
 function buildEmailText(b: BookingLike): string {
   const cab = CAB_TYPES.find((c) => c.id === b.cabType);
+  const isRoundTrip = b.tripType === "ROUND_TRIP";
+  const drops = getDropList(b);
+  const pickupDateTimeStr = [b.pickupDate, b.pickupTime].filter(Boolean).join(" at ");
+  const returnDateTimeStr = isRoundTrip && [b.returnDate, b.returnTime].filter(Boolean).join(" at ");
+
   return [
     `New Vaitheeshwara One Way Drop Taxi booking ${b.bookingRef}`,
     `Passenger: ${b.passengerName} (${b.phone})`,
-    `Trip type: ${b.tripType === "ROUND_TRIP" ? "Round trip" : "One way"}`,
-    `Route: ${b.pickupLocation} → ${b.dropLocation}`,
+    `Trip type: ${isRoundTrip ? "Round trip" : "One way"}`,
+    pickupDateTimeStr ? `Pickup Date & Time: ${pickupDateTimeStr}` : null,
+    returnDateTimeStr ? `Return Date & Time: ${returnDateTimeStr}` : null,
+    `Pickup: ${b.pickupLocation}`,
+    drops.length > 1
+      ? `Drop locations:\n${drops.map((loc, i) => `  - Stop ${i + 1}: ${loc}`).join("\n")}`
+      : `Drop: ${b.dropLocation}`,
     `Cab: ${cab?.name ?? b.cabType}, ${b.passengers} passenger(s)`,
     `Distance: ${b.distanceKm} km`,
     `Total fare: ${formatINR(b.totalFare)}`,
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /**

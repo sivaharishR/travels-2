@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
     const phone = String(body.phone ?? "").trim();
     const email = String(body.email ?? "").trim() || null;
     const pickupLocation = String(body.pickupLocation ?? "").trim();
-    const dropLocation = String(body.dropLocation ?? "").trim();
     const cabType = String(body.cabType ?? "").trim();
     const tripType =
       String(body.tripType ?? "ONE_WAY").trim().toUpperCase() === "ROUND_TRIP"
@@ -48,6 +47,33 @@ export async function POST(request: NextRequest) {
         : "ONE_WAY";
     const passengers = Math.max(1, Math.min(6, Number(body.passengers) || 1));
     const distanceKm = Number(body.distanceKm) || 0;
+
+    // Date & Time
+    const pickupDate = String(body.pickupDate ?? "").trim() || null;
+    const pickupTime = String(body.pickupTime ?? "").trim() || null;
+    const returnDate = tripType === "ROUND_TRIP" ? String(body.returnDate ?? "").trim() || null : null;
+    const returnTime = tripType === "ROUND_TRIP" ? String(body.returnTime ?? "").trim() || null : null;
+
+    // Drop location(s) handling
+    let rawDrops: string[] = [];
+    if (Array.isArray(body.dropLocations) && body.dropLocations.length > 0) {
+      rawDrops = body.dropLocations.map((d: unknown) => String(d ?? "").trim()).filter(Boolean);
+    } else if (typeof body.dropLocations === "string" && body.dropLocations.trim()) {
+      try {
+        const parsed = JSON.parse(body.dropLocations);
+        if (Array.isArray(parsed)) {
+          rawDrops = parsed.map((d: unknown) => String(d ?? "").trim()).filter(Boolean);
+        }
+      } catch {
+        rawDrops = body.dropLocations.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+    }
+    if (rawDrops.length === 0 && body.dropLocation) {
+      rawDrops = [String(body.dropLocation).trim()].filter(Boolean);
+    }
+
+    const dropLocation = rawDrops.length > 1 ? rawDrops.join(" → ") : (rawDrops[0] ?? "");
+    const dropLocationsJson = rawDrops.length > 0 ? JSON.stringify(rawDrops) : null;
 
     // --- Validation ---
     const errors: string[] = [];
@@ -59,10 +85,27 @@ export async function POST(request: NextRequest) {
       errors.push("Please enter a valid email address");
     if (pickupLocation.length < 3)
       errors.push("Pickup location must be at least 3 characters");
-    if (dropLocation.length < 3)
-      errors.push("Drop location must be at least 3 characters");
-    if (pickupLocation.toLowerCase() === dropLocation.toLowerCase())
-      errors.push("Pickup and drop locations cannot be the same");
+
+    if (rawDrops.length === 0) {
+      errors.push("At least one drop location is required");
+    } else {
+      rawDrops.forEach((drop, idx) => {
+        if (drop.length < 2) {
+          errors.push(`Drop location ${idx + 1} must be at least 2 characters`);
+        }
+        if (pickupLocation.toLowerCase() === drop.toLowerCase()) {
+          errors.push(`Drop location "${drop}" cannot be identical to pickup location`);
+        }
+      });
+    }
+
+    if (!pickupDate) {
+      errors.push("Pickup date is required");
+    }
+    if (!pickupTime) {
+      errors.push("Pickup time is required");
+    }
+
     if (!distanceKm || distanceKm <= 0) {
       errors.push("Trip distance must be greater than 0");
     } else if (distanceKm < MIN_TRIP_KM) {
@@ -86,6 +129,11 @@ export async function POST(request: NextRequest) {
         email,
         pickupLocation,
         dropLocation,
+        dropLocations: dropLocationsJson,
+        pickupDate,
+        pickupTime,
+        returnDate,
+        returnTime,
         tripType,
         cabType,
         passengers,
@@ -98,10 +146,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const timingInfo = [pickupDate, pickupTime].filter(Boolean).join(" ");
     await db.activityLog.create({
       data: {
         type: "BOOKING_CREATED",
-        message: `Booking ${booking.bookingRef} created — ${passengerName}, ${pickupLocation} → ${dropLocation} (${cabType}, ${tripType === "ROUND_TRIP" ? "round trip, " : ""}₹${fare.totalFare})`,
+        message: `Booking ${booking.bookingRef} created — ${passengerName}, ${pickupLocation} → ${dropLocation} (${timingInfo ? `${timingInfo}, ` : ""}${cabType}, ${tripType === "ROUND_TRIP" ? "round trip, " : ""}₹${fare.totalFare})`,
         bookingRef: booking.bookingRef,
       },
     });

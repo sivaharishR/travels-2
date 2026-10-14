@@ -44,7 +44,7 @@ const FEATURES = [
     icon: Clock3,
     title: "Flexible scheduling",
     description:
-      "No time slots to fill — book now and we'll call you to plan the departure.",
+      "Select your exact pickup date and time in advance, with multi-stop round trips supported.",
   },
   {
     icon: ShieldCheck,

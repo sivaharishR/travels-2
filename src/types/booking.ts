@@ -8,6 +8,11 @@ export interface Booking {
   email: string | null;
   pickupLocation: string;
   dropLocation: string;
+  dropLocations?: string | null;
+  pickupDate?: string | null;
+  pickupTime?: string | null;
+  returnDate?: string | null;
+  returnTime?: string | null;
   tripType: string;
   cabType: string;
   passengers: number;
